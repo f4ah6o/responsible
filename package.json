@@ -4,15 +4,16 @@
   "private": true,
   "description": "Reference implementation for typed activity and responsibility-boundary process models.",
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "packageManager": "pnpm@10.14.0",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "dev": "vp dev",
+    "build": "vp build",
+    "check": "vp check",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "preview": "vp preview"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "latest",
+    "vite-plus": "latest"
   }
 }
