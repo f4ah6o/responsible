@@ -35,6 +35,7 @@ The first implementation should cover only the semantic core:
 5. Responsibility Boundary Normal Form projection
 6. Plain JSON-serializable view model
 7. Activity decomposition zoom by `children`
+8. SVG graph-node visualization
 
 The core should not include:
 
@@ -89,6 +90,28 @@ zoom out to parent Activity
 switch responsibility boundary again
 ```
 
+## Graph node visualization
+
+The `Graph nodes` screen renders two SVG graphs without adding a rendering dependency.
+
+```text
+Activity tree graph
+  parent Activity -> child Activity
+
+Boundary projection graph
+  projected Activity node -> projected Activity node
+```
+
+The first graph makes decomposition visible. Composite Activity nodes are clickable zoom targets. Leaf Activity nodes represent executable detail.
+
+The second graph uses the current Activity scope and selected responsibility boundary. It renders the normalized projected graph after same-boundary runs have been collapsed into projected nodes.
+
+```text
+layout(project(scope.leaves, boundary)) -> SVG nodes + edges
+```
+
+This keeps visualization downstream of the model. The graph is a view, not a new semantic layer.
+
 ## Layering
 
 ```text
@@ -100,6 +123,9 @@ src/boundary.ts
 
 src/normalize.ts
   Responsibility Boundary Normal Form projection.
+
+src/graph.ts
+  Dependency-free graph layout for reference SVG views.
 
 src/index.ts
   Public API exports.
