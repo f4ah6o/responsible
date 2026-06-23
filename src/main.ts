@@ -1,9 +1,10 @@
 import "./styles.css";
 import { boundaryOf, formatBoundaryValue, isResponsibilityBoundaryNormalForm, projectByResponsibilityBoundary } from "./index.js";
+import { layoutActivityTreeGraph, layoutProjectedGraph, type GraphLayout, type GraphNode } from "./graph.js";
 import type { ActivityDef, BoundaryExpr, BoundaryValue, FlowDef, Id, ProcessModel, ProcessView, ProjectedActivity, ViewDef } from "./model.js";
 import { rootActivityId, sampleModel } from "./sample.js";
 
-type Screen = "activities" | "boundaries";
+type Screen = "activities" | "boundaries" | "graph";
 
 type AppState = {
   screen: Screen;
@@ -18,7 +19,7 @@ const root = rootElement;
 
 const boundaryOptions: BoundaryExpr[] = ["person", "team", "section", "department", "company", "function", "role", "system", ["project", "function"]];
 const state: AppState = {
-  screen: "activities",
+  screen: "graph",
   boundary: "department",
   focusActivityId: rootActivityId,
   selectedActivityId: "receive_order",
@@ -36,7 +37,7 @@ function render(): void {
         <div>
           <p class="eyebrow">responsible reference implementation</p>
           <h1>Activity と責任境界で業務を可視化する</h1>
-          <p class="lead">Activity の分解階層でズームし、同じスコープを責任境界で射影する。Activity は変えず、表示スコープと boundary を切り替える。</p>
+          <p class="lead">Activity の分解階層をノードでズームし、同じスコープを責任境界グラフとして射影する。Activity は変えず、表示スコープと boundary を切り替える。</p>
         </div>
         <div class="summary-card" aria-label="model summary">
           <span>${leafCount}</span><small>leaf activities</small>
@@ -45,8 +46,9 @@ function render(): void {
       </header>
       <nav class="toolbar" aria-label="views">
         <div class="tabs" role="tablist" aria-label="screens">
+          ${tabButton("graph", "Graph nodes")}
           ${tabButton("activities", "Activity zoom")}
-          ${tabButton("boundaries", "Boundary projection")}
+          ${tabButton("boundaries", "Boundary lanes")}
         </div>
         <label class="boundary-picker">
           <span>Boundary</span>
@@ -59,10 +61,16 @@ function render(): void {
         <div class="breadcrumbs">${renderBreadcrumbs()}</div>
         <div class="zoom-scope"><span>scope</span><strong>${escapeHtml(focus?.name ?? state.focusActivityId)}</strong></div>
       </section>
-      ${state.screen === "activities" ? renderActivityScreen(visible, selectedActivity) : renderBoundaryScreen()}
+      ${renderCurrentScreen(visible, selectedActivity)}
     </main>`;
 
   bindEvents();
+}
+
+function renderCurrentScreen(visible: ActivityDef[], selectedActivity: ActivityDef | undefined): string {
+  if (state.screen === "graph") return renderGraphScreen();
+  if (state.screen === "boundaries") return renderBoundaryScreen();
+  return renderActivityScreen(visible, selectedActivity);
 }
 
 function tabButton(screen: Screen, label: string): string {
@@ -175,6 +183,100 @@ function renderBoundaryScreen(): string {
     </section>`;
 }
 
+function renderGraphScreen(): string {
+  const view: ViewDef = { id: "current", layout: "lane", boundary: state.boundary, normalForm: "responsibilityBoundary" };
+  const scoped = scopedProcessModel(leafIdsUnder(state.focusActivityId));
+  const projected = projectByResponsibilityBoundary(scoped, view);
+  const activityGraph = layoutActivityTreeGraph(sampleModel, rootActivityId, state.focusActivityId, state.selectedActivityId);
+  const projectionGraph = layoutProjectedGraph(projected, sampleModel.activities, state.selectedActivityId);
+  const focus = sampleModel.activities[state.focusActivityId];
+
+  return `
+    <section class="screen graph-screen" aria-label="Graph node view">
+      <article class="graph-panel">
+        <div class="projection-header">
+          <div><p class="eyebrow">activity decomposition graph</p><h2>Activity tree</h2></div>
+          <div class="projection-stats">
+            <span><strong>${activityGraph.nodes.length}</strong> nodes</span>
+            <span><strong>${activityGraph.edges.length}</strong> edges</span>
+          </div>
+        </div>
+        ${renderSvgGraph(activityGraph, "activity-tree")}
+      </article>
+      <article class="graph-panel">
+        <div class="projection-header">
+          <div><p class="eyebrow">boundary projection graph</p><h2>${escapeHtml(focus?.name ?? state.focusActivityId)} × ${escapeHtml(boundaryLabel(state.boundary))}</h2></div>
+          <div class="projection-stats">
+            <span><strong>${projectionGraph.nodes.length}</strong> projected nodes</span>
+            <span><strong>${projectionGraph.edges.length}</strong> projected edges</span>
+            <span><strong>${isResponsibilityBoundaryNormalForm(projected) ? "yes" : "no"}</strong> normal form</span>
+          </div>
+        </div>
+        ${renderSvgGraph(projectionGraph, "projection-graph")}
+      </article>
+    </section>`;
+}
+
+function renderSvgGraph(layout: GraphLayout, label: string): string {
+  const byId = new Map(layout.nodes.map((node) => [node.id, node]));
+  const edges = layout.edges
+    .map((edge) => {
+      const from = byId.get(edge.from);
+      const to = byId.get(edge.to);
+      if (!from || !to) return "";
+      const points = edgePoints(from, to);
+      return `<line class="graph-edge" x1="${points.x1}" y1="${points.y1}" x2="${points.x2}" y2="${points.y2}" marker-end="url(#${label}-arrow)" />`;
+    })
+    .join("");
+
+  return `
+    <div class="graph-scroll">
+      <svg class="node-graph" viewBox="0 0 ${layout.width} ${layout.height}" width="${layout.width}" height="${layout.height}" role="img" aria-label="${escapeHtml(label)}">
+        <defs>
+          <marker id="${label}-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" class="graph-arrow" />
+          </marker>
+        </defs>
+        ${edges}
+        ${layout.nodes.map(renderGraphNode).join("")}
+      </svg>
+    </div>`;
+}
+
+function renderGraphNode(node: GraphNode): string {
+  const classes = ["graph-node", `is-${node.kind}`, node.selected ? "is-selected" : "", node.focusable ? "is-focusable" : ""].filter(Boolean).join(" ");
+  const attrs = node.focusable ? `data-graph-focus-id="${node.id}"` : node.activityId ? `data-activity-id="${node.activityId}"` : "";
+  const titleLines = splitLabel(node.label, 16);
+  const detail = truncate(node.detail, 36);
+
+  return `
+    <g class="${classes}" transform="translate(${node.x - 104} ${node.y - 46})" ${attrs} tabindex="0">
+      <rect width="208" height="92" rx="18" />
+      ${titleLines.map((line, index) => `<text class="graph-title" x="104" y="${30 + index * 16}" text-anchor="middle">${escapeHtml(line)}</text>`).join("")}
+      <text class="graph-detail" x="104" y="74" text-anchor="middle">${escapeHtml(detail)}</text>
+    </g>`;
+}
+
+function edgePoints(from: GraphNode, to: GraphNode): { x1: number; y1: number; x2: number; y2: number } {
+  const horizontal = Math.abs(from.y - to.y) < 24;
+  if (horizontal) {
+    const direction = to.x >= from.x ? 1 : -1;
+    return { x1: from.x + direction * 108, y1: from.y, x2: to.x - direction * 108, y2: to.y };
+  }
+
+  const direction = to.y >= from.y ? 1 : -1;
+  return { x1: from.x, y1: from.y + direction * 50, x2: to.x, y2: to.y - direction * 50 };
+}
+
+function splitLabel(label: string, size: number): string[] {
+  if (label.length <= size) return [label];
+  return [label.slice(0, size), truncate(label.slice(size), size)];
+}
+
+function truncate(value: string, size: number): string {
+  return value.length <= size ? value : `${value.slice(0, Math.max(0, size - 1))}…`;
+}
+
 function renderLane(boundary: string, nodes: ProjectedActivity[]): string {
   return `
     <section class="lane" aria-label="${escapeHtml(boundary)} lane">
@@ -277,32 +379,39 @@ function scopedProcessModel(leafIds: readonly Id[]): ProcessModel {
 }
 
 function bindEvents(): void {
-  for (const tab of root.querySelectorAll<HTMLButtonElement>("[data-screen]")) {
-    tab.addEventListener("click", () => setState({ screen: tab.dataset.screen === "boundaries" ? "boundaries" : "activities" }));
+  for (const tab of root.querySelectorAll("[data-screen]")) {
+    tab.addEventListener("click", () => setState({ screen: screenFromValue(tab.getAttribute("data-screen")) }));
   }
 
-  for (const crumb of root.querySelectorAll<HTMLButtonElement>("[data-focus-id]")) {
+  for (const crumb of root.querySelectorAll("[data-focus-id]")) {
     crumb.addEventListener("click", () => {
-      const focusActivityId = crumb.dataset.focusId;
+      const focusActivityId = crumb.getAttribute("data-focus-id");
       if (focusActivityId) setFocus(focusActivityId);
     });
   }
 
-  for (const card of root.querySelectorAll<HTMLButtonElement>("[data-activity-id]")) {
+  for (const graphNode of root.querySelectorAll("[data-graph-focus-id]")) {
+    graphNode.addEventListener("click", () => {
+      const focusActivityId = graphNode.getAttribute("data-graph-focus-id");
+      if (focusActivityId) setFocus(focusActivityId);
+    });
+  }
+
+  for (const card of root.querySelectorAll("[data-activity-id]")) {
     card.addEventListener("click", () => {
-      const selectedActivityId = card.dataset.activityId;
+      const selectedActivityId = card.getAttribute("data-activity-id");
       if (selectedActivityId) setState({ selectedActivityId, screen: "activities" });
     });
   }
 
-  for (const button of root.querySelectorAll<HTMLButtonElement>("[data-zoom-in-id]")) {
+  for (const button of root.querySelectorAll("[data-zoom-in-id]")) {
     button.addEventListener("click", () => {
-      const focusActivityId = button.dataset.zoomInId;
+      const focusActivityId = button.getAttribute("data-zoom-in-id");
       if (focusActivityId) setFocus(focusActivityId);
     });
   }
 
-  root.querySelector<HTMLButtonElement>("[data-zoom-out]")?.addEventListener("click", () => {
+  root.querySelector("[data-zoom-out]")?.addEventListener("click", () => {
     const parent = parentOf(state.focusActivityId);
     if (parent) setFocus(parent, state.focusActivityId);
   });
@@ -311,6 +420,11 @@ function bindEvents(): void {
     const label = (event.currentTarget as HTMLSelectElement).value;
     setState({ boundary: boundaryOptions.find((boundary) => boundaryLabel(boundary) === label) ?? "department" });
   });
+}
+
+function screenFromValue(value: string | null): Screen {
+  if (value === "boundaries" || value === "graph") return value;
+  return "activities";
 }
 
 function setFocus(focusActivityId: Id, selectedActivityId?: Id): void {
