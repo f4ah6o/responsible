@@ -2,6 +2,15 @@ import type { ActivityDef, Id, ProcessModel, ProcessView } from "./model.js";
 
 export type GraphNodeKind = "focus" | "composite" | "leaf" | "projected";
 
+export type GraphLane = Readonly<{
+  id: Id;
+  label: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}>;
+
 export type GraphNode = Readonly<{
   id: Id;
   label: string;
@@ -22,6 +31,7 @@ export type GraphEdge = Readonly<{
 export type GraphLayout = Readonly<{
   width: number;
   height: number;
+  lanes: readonly GraphLane[];
   nodes: readonly GraphNode[];
   edges: readonly GraphEdge[];
 }>;
@@ -30,6 +40,8 @@ const horizontalGap = 260;
 const verticalGap = 160;
 const marginX = 120;
 const marginY = 72;
+const laneHeight = 126;
+const laneGap = 148;
 
 export function layoutActivityTreeGraph(model: ProcessModel, rootId: Id, focusId: Id, selectedId: Id): GraphLayout {
   const levels: Id[][] = [];
@@ -81,24 +93,36 @@ export function layoutActivityTreeGraph(model: ProcessModel, rootId: Id, focusId
     });
   });
 
-  return { width, height, nodes, edges };
+  return { width, height, lanes: [], nodes, edges };
 }
 
 export function layoutProjectedGraph(view: ProcessView, activities: Readonly<Record<Id, ActivityDef>>, selectedId: Id): GraphLayout {
+  const laneLabels = unique(view.activities.map((activity) => activity.boundary));
   const width = Math.max(760, marginX * 2 + Math.max(0, view.activities.length - 1) * horizontalGap);
-  const height = 280;
+  const height = Math.max(280, marginY * 2 + Math.max(1, laneLabels.length) * laneGap);
+  const laneIndex = new Map(laneLabels.map((label, index) => [label, index]));
+  const lanes: GraphLane[] = laneLabels.map((label, index) => ({
+    id: `lane:${label}`,
+    label,
+    x: 44,
+    y: marginY + index * laneGap - laneHeight / 2,
+    width: width - 88,
+    height: laneHeight,
+  }));
+
   const nodes: GraphNode[] = view.activities.map((node, index) => {
     const activityIds = node.kind === "atomic" ? [node.activityId] : [...node.activityIds];
     const firstId = activityIds[0] ?? node.id;
     const label = node.kind === "atomic" ? activities[firstId]?.name ?? firstId : `${activityIds.length} activities`;
     const detail = `${node.boundary} / ${node.input} → ${node.output}`;
+    const row = laneIndex.get(node.boundary) ?? 0;
 
     return {
       id: node.id,
       label,
       detail,
       x: marginX + index * horizontalGap,
-      y: marginY + 64,
+      y: marginY + row * laneGap,
       kind: "projected",
       activityId: firstId,
       selected: activityIds.includes(selectedId),
@@ -108,7 +132,21 @@ export function layoutProjectedGraph(view: ProcessView, activities: Readonly<Rec
   return {
     width,
     height,
+    lanes,
     nodes,
     edges: view.flows,
   };
+}
+
+function unique(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    if (seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+  }
+
+  return result;
 }
