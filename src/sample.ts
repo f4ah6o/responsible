@@ -1,8 +1,65 @@
 import type { ProcessModel } from "./model.js";
 
+export const rootActivityId = "receive_contract_process";
+
 export const sampleModel: ProcessModel = {
   schemaVersion: "responsible.v0",
   activities: {
+    receive_contract_process: {
+      id: "receive_contract_process",
+      name: "契約から請求まで",
+      input: "CustomerInquiry",
+      output: "Invoice",
+      status: "defined",
+      children: ["receive_order", "execute_project", "bill_customer"],
+      responsibility: {
+        company: "Example Construction",
+        function: "project_delivery",
+        project: "Project A",
+      },
+    },
+    receive_order: {
+      id: "receive_order",
+      name: "受注する",
+      input: "CustomerInquiry",
+      output: "AcceptedOrder",
+      status: "defined",
+      children: ["receive_inquiry", "create_estimate", "approve_estimate", "accept_order"],
+      responsibility: {
+        department: "Sales Department",
+        company: "Example Construction",
+        function: "sales",
+        project: "Project A",
+      },
+    },
+    execute_project: {
+      id: "execute_project",
+      name: "施工する",
+      input: "AcceptedOrder",
+      output: "CompletedWork",
+      status: "defined",
+      children: ["plan_construction", "procure_materials", "complete_work"],
+      responsibility: {
+        department: "Construction Department",
+        company: "Example Construction",
+        function: "construction",
+        project: "Project A",
+      },
+    },
+    bill_customer: {
+      id: "bill_customer",
+      name: "請求する",
+      input: "CompletedWork",
+      output: "Invoice",
+      status: "defined",
+      children: ["issue_invoice"],
+      responsibility: {
+        department: "Administration Department",
+        company: "Example Construction",
+        function: "accounting",
+        project: "Project A",
+      },
+    },
     receive_inquiry: {
       id: "receive_inquiry",
       name: "問い合わせを受ける",
@@ -59,7 +116,7 @@ export const sampleModel: ProcessModel = {
     },
     accept_order: {
       id: "accept_order",
-      name: "受注する",
+      name: "受注確定する",
       input: "ApprovedEstimate",
       output: "AcceptedOrder",
       status: "validated",
