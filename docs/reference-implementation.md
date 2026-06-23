@@ -36,6 +36,7 @@ The first implementation should cover only the semantic core:
 6. Plain JSON-serializable view model
 7. Activity decomposition zoom by `children`
 8. SVG graph-node visualization
+9. Graph lanes for responsibility-boundary projection
 
 The core should not include:
 
@@ -99,15 +100,16 @@ Activity tree graph
   parent Activity -> child Activity
 
 Boundary projection graph
-  projected Activity node -> projected Activity node
+  lane(boundary value)
+    projected Activity node -> projected Activity node
 ```
 
 The first graph makes decomposition visible. Composite Activity nodes are clickable zoom targets. Leaf Activity nodes represent executable detail.
 
-The second graph uses the current Activity scope and selected responsibility boundary. It renders the normalized projected graph after same-boundary runs have been collapsed into projected nodes.
+The second graph uses the current Activity scope and selected responsibility boundary. It renders the normalized projected graph after same-boundary runs have been collapsed into projected nodes. Boundary values are rendered as horizontal lanes, and cross-boundary transitions appear as edges that cross lanes.
 
 ```text
-layout(project(scope.leaves, boundary)) -> SVG nodes + edges
+layout(project(scope.leaves, boundary)) -> SVG lanes + nodes + edges
 ```
 
 This keeps visualization downstream of the model. The graph is a view, not a new semantic layer.
