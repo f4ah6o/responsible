@@ -79,6 +79,9 @@ button { cursor: pointer; }
 .graph-panel { overflow: hidden; }
 .graph-scroll { width: 100%; overflow: auto; border: 1px dashed #cbd5e1; border-radius: 18px; background: #f8fafc; }
 .node-graph { display: block; min-width: 100%; }
+.graph-lane rect { fill: #fff; stroke: #cbd5e1; stroke-width: 1.5; opacity: 0.86; }
+.graph-lane:nth-of-type(odd) rect { fill: #f1f5f9; }
+.graph-lane text { fill: #334155; font-size: 13px; font-weight: 900; letter-spacing: 0.02em; }
 .graph-edge { stroke: #94a3b8; stroke-width: 2.4; }
 .graph-arrow { fill: #94a3b8; }
 .graph-node { cursor: pointer; outline: none; }
