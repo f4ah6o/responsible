@@ -4,7 +4,7 @@ import type { Id, ProcessModel, ProcessView, ProjectedActivity, ProjectedFlow, V
 export function projectByResponsibilityBoundary(model: ProcessModel, view: ViewDef): ProcessView {
   assertLaneResponsibilityView(view);
 
-  const orderedActivities = topologicalOrder(model);
+  const orderedActivities = linearOrder(model);
   const projectedActivities: ProjectedActivity[] = [];
   const sourceToProjected = new Map<Id, Id>();
 
@@ -118,33 +118,51 @@ function collapseFlows(model: ProcessModel, sourceToProjected: ReadonlyMap<Id, I
   return flows;
 }
 
-function topologicalOrder(model: ProcessModel): Id[] {
+function linearOrder(model: ProcessModel): Id[] {
   const ids = Object.keys(model.activities);
-  const indegree = new Map<Id, number>(ids.map((id) => [id, 0]));
+  if (ids.length === 0) return [];
+
+  const incoming = new Map<Id, Id[]>();
   const outgoing = new Map<Id, Id[]>();
+
+  for (const id of ids) {
+    incoming.set(id, []);
+    outgoing.set(id, []);
+  }
 
   for (const flow of model.flows) {
     if (!model.activities[flow.from] || !model.activities[flow.to]) continue;
-    outgoing.set(flow.from, [...(outgoing.get(flow.from) ?? []), flow.to]);
-    indegree.set(flow.to, (indegree.get(flow.to) ?? 0) + 1);
+    outgoing.get(flow.from)!.push(flow.to);
+    incoming.get(flow.to)!.push(flow.from);
   }
 
-  const queue = ids.filter((id) => (indegree.get(id) ?? 0) === 0);
-  const result: Id[] = [];
-
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    result.push(id);
-
-    for (const to of outgoing.get(id) ?? []) {
-      const next = (indegree.get(to) ?? 0) - 1;
-      indegree.set(to, next);
-      if (next === 0) queue.push(to);
+  for (const id of ids) {
+    if ((incoming.get(id)?.length ?? 0) > 1 || (outgoing.get(id)?.length ?? 0) > 1) {
+      throw new Error("v0 projection supports linear flows only; branching and merging require graph quotient projection");
     }
   }
 
+  const starts = ids.filter((id) => (incoming.get(id)?.length ?? 0) === 0);
+  if (starts.length !== 1) {
+    throw new Error("v0 projection requires exactly one start activity in the selected flow");
+  }
+
+  const result: Id[] = [];
+  const seen = new Set<Id>();
+  let current: Id | undefined = starts[0];
+
+  while (current) {
+    if (seen.has(current)) {
+      throw new Error("cycle detected: v0 projection requires a linear acyclic flow");
+    }
+
+    seen.add(current);
+    result.push(current);
+    current = outgoing.get(current)?.[0];
+  }
+
   if (result.length !== ids.length) {
-    throw new Error("cycle detected: responsibility-boundary projection requires an acyclic flow graph in v0");
+    throw new Error("v0 projection requires all activities to belong to one connected linear flow");
   }
 
   return result;
