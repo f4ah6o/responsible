@@ -119,7 +119,15 @@ function collapseFlows(model: ProcessModel, sourceToProjected: ReadonlyMap<Id, I
 }
 
 function linearOrder(model: ProcessModel): Id[] {
-  const ids = Object.keys(model.activities);
+  const flowIds = new Set<Id>();
+  for (const flow of model.flows) {
+    if (model.activities[flow.from] && model.activities[flow.to]) {
+      flowIds.add(flow.from);
+      flowIds.add(flow.to);
+    }
+  }
+
+  const ids = flowIds.size > 0 ? [...flowIds] : Object.keys(model.activities);
   if (ids.length === 0) return [];
 
   const incoming = new Map<Id, Id[]>();
@@ -131,7 +139,7 @@ function linearOrder(model: ProcessModel): Id[] {
   }
 
   for (const flow of model.flows) {
-    if (!model.activities[flow.from] || !model.activities[flow.to]) continue;
+    if (!incoming.has(flow.to) || !outgoing.has(flow.from)) continue;
     outgoing.get(flow.from)!.push(flow.to);
     incoming.get(flow.to)!.push(flow.from);
   }
