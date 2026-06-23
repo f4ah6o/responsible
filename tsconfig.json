@@ -1,16 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
     "moduleResolution": "Bundler",
-    "declaration": true,
-    "outDir": "dist",
-    "rootDir": "src",
+    "isolatedModules": true,
+    "moduleDetection": "force",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "useUnknownInCatchVariables": true,
-    "skipLibCheck": true
+    "skipDefaultLibCheck": true
   },
   "include": ["src/**/*.ts"]
 }
