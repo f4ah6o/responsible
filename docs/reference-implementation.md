@@ -34,6 +34,7 @@ The first implementation should cover only the semantic core:
 4. Boundary resolution
 5. Responsibility Boundary Normal Form projection
 6. Plain JSON-serializable view model
+7. Activity decomposition zoom by `children`
 
 The core should not include:
 
@@ -46,6 +47,47 @@ The core should not include:
 7. validation libraries
 
 Those can be added as separate adapters after the model stabilizes.
+
+## Activity decomposition zoom
+
+Activity zoom and responsibility-boundary zoom are separate axes.
+
+```text
+Activity zoom = choose decomposition scope
+Boundary zoom = choose responsibility boundary
+```
+
+A parent Activity can be decomposed by `children`.
+
+```text
+receive_contract_process
+  -> receive_order
+       -> receive_inquiry
+       -> create_estimate
+       -> approve_estimate
+       -> accept_order
+  -> execute_project
+       -> plan_construction
+       -> procure_materials
+       -> complete_work
+  -> bill_customer
+       -> issue_invoice
+```
+
+The UI keeps a current Activity scope. The Activity screen shows the immediate children of that scope. The Boundary projection screen projects only the leaf Activities under that scope.
+
+```text
+project(scope.children*, boundary)
+```
+
+This means the same model can be viewed in two independent directions:
+
+```text
+zoom into Activity detail
+switch responsibility boundary
+zoom out to parent Activity
+switch responsibility boundary again
+```
 
 ## Layering
 
@@ -111,7 +153,6 @@ The reference implementation should remain boring.
 ```text
 plain objects
 pure functions
-no global state
 no hidden runtime
 no framework coupling
 ```
