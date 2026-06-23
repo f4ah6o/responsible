@@ -1,6 +1,7 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  base: process.env.GITHUB_PAGES === "true" ? "/responsible/" : "/",
   server: {
     port: 5173,
   },
