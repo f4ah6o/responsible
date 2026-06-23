@@ -273,7 +273,6 @@ function scopedProcessModel(leafIds: readonly Id[]): ProcessModel {
     schemaVersion: sampleModel.schemaVersion,
     activities,
     flows,
-    views: sampleModel.views,
   };
 }
 
