@@ -207,6 +207,7 @@ function renderGraphScreen(): string {
         <div class="projection-header">
           <div><p class="eyebrow">boundary projection graph</p><h2>${escapeHtml(focus?.name ?? state.focusActivityId)} × ${escapeHtml(boundaryLabel(state.boundary))}</h2></div>
           <div class="projection-stats">
+            <span><strong>${projectionGraph.lanes.length}</strong> lanes</span>
             <span><strong>${projectionGraph.nodes.length}</strong> projected nodes</span>
             <span><strong>${projectionGraph.edges.length}</strong> projected edges</span>
             <span><strong>${isResponsibilityBoundaryNormalForm(projected) ? "yes" : "no"}</strong> normal form</span>
@@ -219,6 +220,7 @@ function renderGraphScreen(): string {
 
 function renderSvgGraph(layout: GraphLayout, label: string): string {
   const byId = new Map(layout.nodes.map((node) => [node.id, node]));
+  const lanes = layout.lanes.map((lane) => `<g class="graph-lane"><rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="22" /><text x="${lane.x + 18}" y="${lane.y + 28}">${escapeHtml(lane.label)}</text></g>`).join("");
   const edges = layout.edges
     .map((edge) => {
       const from = byId.get(edge.from);
@@ -237,6 +239,7 @@ function renderSvgGraph(layout: GraphLayout, label: string): string {
             <path d="M0,0 L0,6 L9,3 z" class="graph-arrow" />
           </marker>
         </defs>
+        ${lanes}
         ${edges}
         ${layout.nodes.map(renderGraphNode).join("")}
       </svg>
