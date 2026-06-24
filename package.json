@@ -9,9 +9,11 @@
     "build": "vp build",
     "check": "vp check",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import ./tools/test-register.mjs --test \"src/__tests__/**/*.test.ts\"",
     "preview": "vp preview"
   },
   "devDependencies": {
+    "@types/node": "latest",
     "typescript": "latest",
     "vite-plus": "latest"
   },

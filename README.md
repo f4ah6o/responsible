@@ -23,6 +23,8 @@ It models typed Activity composition, Responsibility Boundary projection, and Re
 
 The reference implementation keeps the core small: plain TypeScript data, pure projection functions, and `ProcessModel -> ProcessView`. Visualization, BPMN-like lane rendering, DSL parsing, persistence, and execution runtimes are downstream layers.
 
+Current v0 implements only the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, linear-only flows, `Effect` as plain data, and no execution or inverse-projection API. See `docs/reference-implementation.md` for the v0 scope.
+
 Normative semantic rules are documented in `docs/semantic-core.md`. Theory background and implementation role mapping are documented in `docs/theory.md`. The older `docs/research-report.md` remains background research, not the source of normative design rules.
 
 ---
