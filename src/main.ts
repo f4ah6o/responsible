@@ -6,6 +6,12 @@ import {
   projectByResponsibilityBoundary,
 } from "./index.js";
 import {
+  HIERARCHICAL_BOUNDARY_ORDER,
+  boundaryForLevel,
+  canZoomIn,
+  canZoomOut,
+} from "./hierarchy.js";
+import {
   layoutActivityTreeGraph,
   layoutProjectedGraph,
   type GraphLayout,
@@ -29,7 +35,8 @@ type Screen = "activities" | "boundaries" | "graph";
 type AppState = {
   screen: Screen;
   boundary: BoundaryExpr;
-  focusActivityId: Id;
+  zoomLevel: number | null;
+  drillActivityId: Id;
   selectedActivityId: Id;
 };
 
@@ -37,29 +44,23 @@ const rootElement = document.querySelector<HTMLDivElement>("#app");
 if (!rootElement) throw new Error("#app is required");
 const root = rootElement;
 
-const boundaryOptions: BoundaryExpr[] = [
-  "person",
-  "team",
-  "section",
-  "department",
-  "company",
-  "function",
-  "role",
-  "system",
-  ["project", "function"],
-];
+const displayAxisOptions: BoundaryExpr[] = ["function", "role", "system", ["project", "function"]];
+
+const DEFAULT_ZOOM_LEVEL = 1;
+
 const state: AppState = {
   screen: "graph",
-  boundary: "department",
-  focusActivityId: rootActivityId,
+  boundary: HIERARCHICAL_BOUNDARY_ORDER[DEFAULT_ZOOM_LEVEL]!,
+  zoomLevel: DEFAULT_ZOOM_LEVEL,
+  drillActivityId: rootActivityId,
   selectedActivityId: "receive_order",
 };
 
 function render(): void {
-  const visible = visibleActivities();
-  const selectedActivity = sampleModel.activities[state.selectedActivityId] ?? visible[0];
   const leafCount = leafIdsUnder(rootActivityId).length;
-  const focus = sampleModel.activities[state.focusActivityId];
+  const projected = projectCurrent();
+  const zoom = currentZoomDescriptor();
+  const drillActivity = sampleModel.activities[state.drillActivityId];
 
   root.innerHTML = `
     <main class="shell">
@@ -67,73 +68,112 @@ function render(): void {
         <div>
           <p class="eyebrow">responsible reference implementation</p>
           <h1>Activity と責任境界で業務を可視化する</h1>
-          <p class="lead">Activity の分解階層をノードでズームし、同じスコープを責任境界グラフとして射影する。Activity は変えず、表示スコープと boundary を切り替える。</p>
+          <p class="lead">同じ Activity Graph と同じ表示対象プロセスに対して、責任境界レベルを切り替えることがズームである。Activity は変えず、boundary レベルを上下させる。</p>
         </div>
         <div class="summary-card" aria-label="model summary">
           <span>${leafCount}</span><small>leaf activities</small>
-          <span>${visible.length}</span><small>visible here</small>
+          <span>${projected.activities.length}</span><small>projected nodes</small>
         </div>
       </header>
       <nav class="toolbar" aria-label="views">
         <div class="tabs" role="tablist" aria-label="screens">
           ${tabButton("graph", "Graph nodes")}
-          ${tabButton("activities", "Activity zoom")}
+          ${tabButton("activities", "Activity decomposition")}
           ${tabButton("boundaries", "Boundary lanes")}
         </div>
         <label class="boundary-picker">
-          <span>Boundary</span>
-          <select id="boundary-select">
-            ${boundaryOptions.map((boundary) => option(boundary)).join("")}
+          <span>Display axis</span>
+          <select id="display-axis-select">
+            <option value="__hierarchical__" ${zoom.isHierarchical ? "selected" : ""}>boundary zoom</option>
+            ${displayAxisOptions.map((axis) => option(axis, state.boundary)).join("")}
           </select>
         </label>
       </nav>
-      <section class="zoom-bar" aria-label="Activity zoom path">
-        <div class="breadcrumbs">${renderBreadcrumbs()}</div>
-        <div class="zoom-scope"><span>scope</span><strong>${escapeHtml(focus?.name ?? state.focusActivityId)}</strong></div>
+      <section class="zoom-bar" aria-label="Responsibility boundary zoom">
+        <button class="secondary-action" id="zoom-out" ${zoom.canZoomOut ? "" : "disabled"}>Zoom out</button>
+        <div class="zoom-scope">
+          <span>boundary zoom</span>
+          <strong>${escapeHtml(zoom.label)}</strong>
+          <small>${escapeHtml(zoom.rangeLabel)}</small>
+        </div>
+        <button class="primary-action" id="zoom-in" ${zoom.canZoomIn ? "" : "disabled"}>Zoom in</button>
       </section>
-      ${renderCurrentScreen(visible, selectedActivity)}
+      <section class="zoom-bar" aria-label="Activity decomposition scope">
+        <div class="breadcrumbs">${renderDrillBreadcrumbs()}</div>
+        <div class="zoom-scope"><span>decomposition scope</span><strong>${escapeHtml(drillActivity?.name ?? state.drillActivityId)}</strong></div>
+      </section>
+      ${renderCurrentScreen()}
     </main>`;
 
   bindEvents();
 }
 
-function renderCurrentScreen(
-  visible: ActivityDef[],
-  selectedActivity: ActivityDef | undefined,
-): string {
+type ZoomDescriptor = {
+  label: string;
+  rangeLabel: string;
+  isHierarchical: boolean;
+  canZoomIn: boolean;
+  canZoomOut: boolean;
+};
+
+function currentZoomDescriptor(): ZoomDescriptor {
+  if (state.zoomLevel === null) {
+    return {
+      label: boundaryLabel(state.boundary),
+      rangeLabel: "display axis (not a hierarchical zoom level)",
+      isHierarchical: false,
+      canZoomIn: false,
+      canZoomOut: false,
+    };
+  }
+
+  const level = state.zoomLevel;
+  const ordinal = level + 1;
+  const total = HIERARCHICAL_BOUNDARY_ORDER.length;
+  return {
+    label: HIERARCHICAL_BOUNDARY_ORDER[level]!,
+    rangeLabel: `level ${ordinal}/${total}`,
+    isHierarchical: true,
+    canZoomIn: canZoomIn(level),
+    canZoomOut: canZoomOut(level),
+  };
+}
+
+function renderCurrentScreen(): string {
   if (state.screen === "graph") return renderGraphScreen();
   if (state.screen === "boundaries") return renderBoundaryScreen();
-  return renderActivityScreen(visible, selectedActivity);
+  return renderActivityScreen();
 }
 
 function tabButton(screen: Screen, label: string): string {
   const selected = state.screen === screen;
-  return `<button class="tab ${selected ? "is-selected" : ""}" data-screen="${screen}" role="tab" aria-selected="${selected}">${label}</button>`;
+  return `<button class="tab ${selected ? "is-selected" : ""}" data-screen="${screen}" role="tab" aria-selected="${selected}">${escapeHtml(label)}</button>`;
 }
 
-function option(boundary: BoundaryExpr): string {
+function option(boundary: BoundaryExpr, current: BoundaryExpr): string {
   const label = boundaryLabel(boundary);
-  return `<option value="${escapeHtml(label)}" ${label === boundaryLabel(state.boundary) ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  return `<option value="${escapeHtml(label)}" ${label === boundaryLabel(current) ? "selected" : ""}>${escapeHtml(label)}</option>`;
 }
 
-function renderBreadcrumbs(): string {
-  const path = pathToActivity(rootActivityId, state.focusActivityId) ?? [rootActivityId];
+function renderDrillBreadcrumbs(): string {
+  const path = pathToActivity(rootActivityId, state.drillActivityId) ?? [rootActivityId];
   return path
     .map((id, index) => {
       const activity = sampleModel.activities[id];
-      const current = id === state.focusActivityId;
+      const current = id === state.drillActivityId;
       const separator = index === 0 ? "" : `<span class="breadcrumb-separator">/</span>`;
-      return `${separator}<button class="breadcrumb ${current ? "is-current" : ""}" data-focus-id="${id}">${escapeHtml(activity?.name ?? id)}</button>`;
+      return `${separator}<button class="breadcrumb ${current ? "is-current" : ""}" data-drill-id="${id}">${escapeHtml(activity?.name ?? id)}</button>`;
     })
     .join("");
 }
 
-function renderActivityScreen(
-  activities: ActivityDef[],
-  selectedActivity: ActivityDef | undefined,
-): string {
+function renderActivityScreen(): string {
+  const activities = drillChildren();
+  const selectedActivity =
+    sampleModel.activities[state.selectedActivityId] ?? activities[0];
+
   return `
-    <section class="screen activity-screen" aria-label="Activity view">
+    <section class="screen activity-screen" aria-label="Activity decomposition view">
       <div class="activity-rail" aria-label="Activity sequence">
         ${activities.map((activity, index) => renderActivityCard(activity, index + 1)).join("")}
       </div>
@@ -183,8 +223,8 @@ function renderActivityInspector(activity: ActivityDef): string {
         <div><dt>${escapeHtml(boundaryLabel(state.boundary))}</dt><dd>${escapeHtml(boundaryOf(activity, state.boundary))}</dd></div>
       </dl>
       <div class="zoom-actions">
-        ${children.length > 0 ? `<button class="primary-action" data-zoom-in-id="${activity.id}">Zoom into this Activity</button>` : `<span class="leaf-note">Leaf Activity: this is the current executable detail.</span>`}
-        ${state.focusActivityId !== rootActivityId ? `<button class="secondary-action" data-zoom-out="true">Zoom out</button>` : ""}
+        ${children.length > 0 ? `<button class="primary-action" data-drill-in-id="${activity.id}">Drill into this Activity</button>` : `<span class="leaf-note">Leaf Activity: this is the current executable detail.</span>`}
+        ${state.drillActivityId !== rootActivityId ? `<button class="secondary-action" data-drill-out="true">Drill out</button>` : ""}
       </div>
       <h3>Children</h3>
       <div class="child-list">
@@ -200,22 +240,16 @@ function renderActivityInspector(activity: ActivityDef): string {
 }
 
 function renderBoundaryScreen(): string {
-  const view: ViewDef = {
-    id: "current",
-    layout: "lane",
-    boundary: state.boundary,
-    normalForm: "responsibilityBoundary",
-  };
-  const scoped = scopedProcessModel(leafIdsUnder(state.focusActivityId));
+  const view = currentView();
+  const scoped = scopedProcessModel(scopeLeafIds());
   const projected = projectByResponsibilityBoundary(scoped, view);
   const lanes = groupByBoundary(projected);
   const collapsedCount = Object.keys(scoped.activities).length - projected.activities.length;
-  const focus = sampleModel.activities[state.focusActivityId];
 
   return `
     <section class="screen boundary-screen" aria-label="Responsibility boundary view">
       <div class="projection-header">
-        <div><p class="eyebrow">projection in activity scope</p><h2>${escapeHtml(focus?.name ?? state.focusActivityId)} × ${escapeHtml(boundaryLabel(state.boundary))}</h2></div>
+        <div><p class="eyebrow">projection of the displayed process</p><h2>Process × ${escapeHtml(boundaryLabel(state.boundary))}</h2></div>
         <div class="projection-stats">
           <span><strong>${Object.keys(scoped.activities).length}</strong> leaf activities</span>
           <span><strong>${projected.activities.length}</strong> projected nodes</span>
@@ -230,26 +264,19 @@ function renderBoundaryScreen(): string {
 }
 
 function renderGraphScreen(): string {
-  const view: ViewDef = {
-    id: "current",
-    layout: "lane",
-    boundary: state.boundary,
-    normalForm: "responsibilityBoundary",
-  };
-  const scoped = scopedProcessModel(leafIdsUnder(state.focusActivityId));
-  const projected = projectByResponsibilityBoundary(scoped, view);
+  const scoped = scopedProcessModel(scopeLeafIds());
+  const projected = projectByResponsibilityBoundary(scoped, currentView());
   const activityGraph = layoutActivityTreeGraph(
     sampleModel,
     rootActivityId,
-    state.focusActivityId,
+    state.drillActivityId,
     state.selectedActivityId,
   );
   const projectionGraph = layoutProjectedGraph(
     projected,
     sampleModel.activities,
-    state.selectedActivityId,
+    resolveSelectedLeaf() ?? state.selectedActivityId,
   );
-  const focus = sampleModel.activities[state.focusActivityId];
 
   return `
     <section class="screen graph-screen" aria-label="Graph node view">
@@ -261,11 +288,12 @@ function renderGraphScreen(): string {
             <span><strong>${activityGraph.edges.length}</strong> edges</span>
           </div>
         </div>
+        <p class="lead">Activity ツリーの移動は Drill-down（分解）。責任境界ズームとは別操作。</p>
         ${renderSvgGraph(activityGraph, "activity-tree")}
       </article>
       <article class="graph-panel">
         <div class="projection-header">
-          <div><p class="eyebrow">boundary projection graph</p><h2>${escapeHtml(focus?.name ?? state.focusActivityId)} × ${escapeHtml(boundaryLabel(state.boundary))}</h2></div>
+          <div><p class="eyebrow">boundary projection graph</p><h2>Process × ${escapeHtml(boundaryLabel(state.boundary))}</h2></div>
           <div class="projection-stats">
             <span><strong>${projectionGraph.lanes.length}</strong> lanes</span>
             <span><strong>${projectionGraph.nodes.length}</strong> projected nodes</span>
@@ -273,6 +301,7 @@ function renderGraphScreen(): string {
             <span><strong>${isResponsibilityBoundaryNormalForm(projected) ? "yes" : "no"}</strong> normal form</span>
           </div>
         </div>
+        <p class="lead">Zoom で Activity Graph のスコープは変わらず、責任境界レベルだけ切り替わる。</p>
         ${renderSvgGraph(projectionGraph, "projection-graph")}
       </article>
     </section>`;
@@ -321,7 +350,7 @@ function renderGraphNode(node: GraphNode): string {
     .filter(Boolean)
     .join(" ");
   const attrs = node.focusable
-    ? `data-graph-focus-id="${node.id}"`
+    ? `data-graph-drill-id="${node.id}"`
     : node.activityId
       ? `data-activity-id="${node.activityId}"`
       : "";
@@ -396,10 +425,10 @@ function groupByBoundary(view: ProcessView): [string, ProjectedActivity[]][] {
   return order.map((boundary) => [boundary, groups.get(boundary) ?? []]);
 }
 
-function visibleActivities(): ActivityDef[] {
-  const children = activityChildren(state.focusActivityId);
+function drillChildren(): ActivityDef[] {
+  const children = activityChildren(state.drillActivityId);
   if (children.length > 0) return children;
-  const focus = sampleModel.activities[state.focusActivityId];
+  const focus = sampleModel.activities[state.drillActivityId];
   return focus ? [focus] : [];
 }
 
@@ -442,6 +471,10 @@ function parentOf(id: Id): Id | undefined {
   return undefined;
 }
 
+function scopeLeafIds(): Id[] {
+  return leafIdsUnder(rootActivityId);
+}
+
 function scopedProcessModel(leafIds: readonly Id[]): ProcessModel {
   const include = new Set(leafIds);
   const activities: Record<Id, ActivityDef> = {};
@@ -463,6 +496,28 @@ function scopedProcessModel(leafIds: readonly Id[]): ProcessModel {
   };
 }
 
+function currentView(): ViewDef {
+  return {
+    id: "current",
+    layout: "lane",
+    boundary: state.boundary,
+    normalForm: "responsibilityBoundary",
+  };
+}
+
+function projectCurrent(): ProcessView {
+  const scoped = scopedProcessModel(scopeLeafIds());
+  return projectByResponsibilityBoundary(scoped, currentView());
+}
+
+function resolveSelectedLeaf(): Id | undefined {
+  const activity = sampleModel.activities[state.selectedActivityId];
+  if (!activity) return undefined;
+  if (!activity.children || activity.children.length === 0) return activity.id;
+  const leaves = leafIdsUnder(activity.id);
+  return leaves[0];
+}
+
 function bindEvents(): void {
   for (const tab of root.querySelectorAll("[data-screen]")) {
     tab.addEventListener("click", () =>
@@ -470,17 +525,17 @@ function bindEvents(): void {
     );
   }
 
-  for (const crumb of root.querySelectorAll("[data-focus-id]")) {
+  for (const crumb of root.querySelectorAll("[data-drill-id]")) {
     crumb.addEventListener("click", () => {
-      const focusActivityId = crumb.getAttribute("data-focus-id");
-      if (focusActivityId) setFocus(focusActivityId);
+      const drillActivityId = crumb.getAttribute("data-drill-id");
+      if (drillActivityId) setDrill(drillActivityId);
     });
   }
 
-  for (const graphNode of root.querySelectorAll("[data-graph-focus-id]")) {
+  for (const graphNode of root.querySelectorAll("[data-graph-drill-id]")) {
     graphNode.addEventListener("click", () => {
-      const focusActivityId = graphNode.getAttribute("data-graph-focus-id");
-      if (focusActivityId) setFocus(focusActivityId);
+      const drillActivityId = graphNode.getAttribute("data-graph-drill-id");
+      if (drillActivityId) setDrill(drillActivityId);
     });
   }
 
@@ -491,24 +546,49 @@ function bindEvents(): void {
     });
   }
 
-  for (const button of root.querySelectorAll("[data-zoom-in-id]")) {
+  for (const button of root.querySelectorAll("[data-drill-in-id]")) {
     button.addEventListener("click", () => {
-      const focusActivityId = button.getAttribute("data-zoom-in-id");
-      if (focusActivityId) setFocus(focusActivityId);
+      const drillActivityId = button.getAttribute("data-drill-in-id");
+      if (drillActivityId) setDrill(drillActivityId);
     });
   }
 
-  root.querySelector("[data-zoom-out]")?.addEventListener("click", () => {
-    const parent = parentOf(state.focusActivityId);
-    if (parent) setFocus(parent, state.focusActivityId);
+  root.querySelector("[data-drill-out]")?.addEventListener("click", () => {
+    const parent = parentOf(state.drillActivityId);
+    if (parent) setDrill(parent, state.drillActivityId);
   });
 
-  root.querySelector<HTMLSelectElement>("#boundary-select")?.addEventListener("change", (event) => {
-    const label = (event.currentTarget as HTMLSelectElement).value;
-    setState({
-      boundary:
-        boundaryOptions.find((boundary) => boundaryLabel(boundary) === label) ?? "department",
+  root.querySelector("#zoom-in")?.addEventListener("click", () => {
+    zoomBoundary(1);
+  });
+
+  root.querySelector("#zoom-out")?.addEventListener("click", () => {
+    zoomBoundary(-1);
+  });
+
+  root
+    .querySelector<HTMLSelectElement>("#display-axis-select")
+    ?.addEventListener("change", (event) => {
+      const value = (event.currentTarget as HTMLSelectElement).value;
+      if (value === "__hierarchical__") {
+        setState({
+          boundary: boundaryForLevel(state.zoomLevel ?? DEFAULT_ZOOM_LEVEL),
+          zoomLevel: state.zoomLevel ?? DEFAULT_ZOOM_LEVEL,
+        });
+        return;
+      }
+      const axis =
+        displayAxisOptions.find((boundary) => boundaryLabel(boundary) === value) ?? "function";
+      setState({ boundary: axis, zoomLevel: null });
     });
+}
+
+function zoomBoundary(direction: 1 | -1): void {
+  if (state.zoomLevel === null) return;
+  const next = state.zoomLevel + (direction === 1 ? 1 : -1);
+  setState({
+    zoomLevel: next,
+    boundary: boundaryForLevel(next),
   });
 }
 
@@ -517,11 +597,11 @@ function screenFromValue(value: string | null): Screen {
   return "activities";
 }
 
-function setFocus(focusActivityId: Id, selectedActivityId?: Id): void {
-  const children = activityChildren(focusActivityId);
+function setDrill(drillActivityId: Id, selectedActivityId?: Id): void {
+  const children = activityChildren(drillActivityId);
   setState({
-    focusActivityId,
-    selectedActivityId: selectedActivityId ?? children[0]?.id ?? focusActivityId,
+    drillActivityId,
+    selectedActivityId: selectedActivityId ?? children[0]?.id ?? drillActivityId,
   });
 }
 
