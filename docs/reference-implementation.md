@@ -34,7 +34,7 @@ The first implementation should cover only the semantic core:
 4. Boundary resolution
 5. Responsibility Boundary Normal Form projection
 6. Plain JSON-serializable view model
-7. Activity decomposition zoom by `children`
+7. Activity decomposition drill-down by `children` (separate from boundary zoom)
 8. SVG graph-node visualization
 9. Graph lanes for responsibility-boundary projection
 
@@ -50,14 +50,49 @@ The core should not include:
 
 Those can be added as separate adapters after the model stabilizes.
 
-## Activity decomposition zoom
+## Zoom and decomposition
 
-Activity zoom and responsibility-boundary zoom are separate axes.
+Per `README.md` (`Digital zoom`, `Design principles`), **zoom means choosing a responsibility boundary level**, not moving along the Activity decomposition hierarchy. These are two separate axes of the reference UI:
 
 ```text
-Activity zoom = choose decomposition scope
-Boundary zoom = choose responsibility boundary
+zoom        = choose responsibility boundary level (hierarchical)
+drill-down  = choose Activity decomposition scope (children)
 ```
+
+### Responsibility boundary zoom
+
+The hierarchical responsibility boundaries are ordered from the most coarse level to the most detailed level:
+
+```text
+company < department < section < team < person
+```
+
+This ordered constant (`src/hierarchy.ts`, re-exported from `src/index.ts`) is the single source of truth for boundary zoom. Zoom in moves one step toward `person`; zoom out moves one step toward `company`. Both ends clamp, and the corresponding buttons are disabled at the ends.
+
+Zoom operates on a fixed scope. The displayed process's leaf set does not change when zooming:
+
+```text
+ProcessView = normalize(project(scope.leaves, boundaryLevel))
+```
+
+Only `boundaryLevel` changes between zoom steps. The same Activity Graph and the same displayed-process leaf set are projected at every level.
+
+```text
+company view:
+  Example Construction -> Partner Company -> Example Construction
+
+department view:
+  Sales Department -> Construction Department -> Administration Department
+
+section view:
+  Sales Section -> Estimation Section -> Sales Section -> Construction Section -> Procurement Section -> Construction Section -> Accounting Section
+```
+
+### Display-axis switch (non-hierarchical boundaries)
+
+`function`, `role`, `system`, and composite boundaries such as `[project, function]` are not part of the hierarchical zoom order. They are selected as a different display axis, independent of zoom.
+
+### Activity decomposition (drill-down)
 
 A parent Activity can be decomposed by `children`.
 
@@ -76,19 +111,12 @@ receive_contract_process
        -> issue_invoice
 ```
 
-The UI keeps a current Activity scope. The Activity screen shows the immediate children of that scope. The Boundary projection screen projects only the leaf Activities under that scope.
+The UI keeps a separate decomposition scope for the Activity screen. The Activity screen shows the immediate children of that scope. Moving this scope is called **drill-down / drill-out**, not zoom. It does not affect the responsibility-boundary projection, which always projects the displayed-process leaf set.
 
 ```text
-project(scope.children*, boundary)
-```
-
-This means the same model can be viewed in two independent directions:
-
-```text
-zoom into Activity detail
-switch responsibility boundary
-zoom out to parent Activity
-switch responsibility boundary again
+drill-down  : scope -> scope.children
+drill-out   : scope -> scope.parent
+projection  : project(displayedProcess.leaves, boundaryLevel)   (independent of drill scope)
 ```
 
 ## Graph node visualization
@@ -104,12 +132,12 @@ Boundary projection graph
     projected Activity node -> projected Activity node
 ```
 
-The first graph makes decomposition visible. Composite Activity nodes are clickable zoom targets. Leaf Activity nodes represent executable detail.
+The first graph makes decomposition visible. Composite Activity nodes are clickable drill-down targets (the decomposition scope for the Activity screen). Leaf Activity nodes represent executable detail. Drill-down is a separate operation from responsibility-boundary zoom.
 
-The second graph uses the current Activity scope and selected responsibility boundary. It renders the normalized projected graph after same-boundary runs have been collapsed into projected nodes. Boundary values are rendered as horizontal lanes, and cross-boundary transitions appear as edges that cross lanes.
+The second graph uses the displayed-process scope and the selected responsibility-boundary level. It renders the normalized projected graph after same-boundary runs have been collapsed into projected nodes. Boundary values are rendered as horizontal lanes, and cross-boundary transitions appear as edges that cross lanes.
 
 ```text
-layout(project(scope.leaves, boundary)) -> SVG lanes + nodes + edges
+layout(project(displayedProcess.leaves, boundaryLevel)) -> SVG lanes + nodes + edges
 ```
 
 This keeps visualization downstream of the model. The graph is a view, not a new semantic layer.
@@ -122,6 +150,9 @@ src/model.ts
 
 src/boundary.ts
   boundaryOf(activity, boundaryExpr).
+
+src/hierarchy.ts
+  Hierarchical responsibility-boundary zoom order and level helpers.
 
 src/normalize.ts
   Responsibility Boundary Normal Form projection.
