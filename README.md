@@ -15,6 +15,18 @@ Activity<Input, Output>
 
 ---
 
+## Theoretical position
+
+`responsible` is an Activity-centered semantic core.
+
+It models typed Activity composition, Responsibility Boundary projection, and Responsibility Boundary Normal Form. It is not a BPMN runtime, RACI chart tool, Event Sourcing runtime, Actor runtime, or State Machine runtime.
+
+The reference implementation keeps the core small: plain TypeScript data, pure projection functions, and `ProcessModel -> ProcessView`. Visualization, BPMN-like lane rendering, DSL parsing, persistence, and execution runtimes are downstream layers.
+
+Normative semantic rules are documented in `docs/semantic-core.md`. Theory background and implementation role mapping are documented in `docs/theory.md`. The older `docs/research-report.md` remains background research, not the source of normative design rules.
+
+---
+
 ## Core idea
 
 業務は Activity の合成として表す。
@@ -454,48 +466,44 @@ view project_function_view {
 
 ```ts
 type ProcessModel = {
-  schemaVersion: "responsible.v0"
-  activities: Record<string, ActivityDef>
-  types: Record<string, TypeDef>
-  flows: FlowDef[]
-  views: ViewDef[]
-}
+  schemaVersion: "responsible.v0";
+  activities: Record<string, ActivityDef>;
+  types: Record<string, TypeDef>;
+  flows: FlowDef[];
+  views: ViewDef[];
+};
 
 type ActivityDef = {
-  id: string
-  name?: string
-  input: TypeRef
-  output: TypeRef
-  responsibility?: Responsibility
-  children?: string[]
-  status?: "discovered" | "defined" | "validated" | "automatable"
-}
+  id: string;
+  name?: string;
+  input: TypeRef;
+  output: TypeRef;
+  responsibility?: Responsibility;
+  children?: string[];
+  status?: "discovered" | "defined" | "validated" | "automatable";
+};
 
-type Responsibility = Record<string, unknown>
+type Responsibility = Record<string, unknown>;
 
 type FlowDef = {
-  from: string
-  to: string
-  mapping?: string
-  contract?: string
-}
+  from: string;
+  to: string;
+  mapping?: string;
+  contract?: string;
+};
 
 type ViewDef = {
-  id: string
-  layout: "lane"
-  boundary: BoundaryExpr
-  normalForm: "responsibilityBoundary"
-}
+  id: string;
+  layout: "lane";
+  boundary: BoundaryExpr;
+  normalForm: "responsibilityBoundary";
+};
 
-type BoundaryExpr = string | string[]
+type BoundaryExpr = string | string[];
 
-type TypeRef = string
+type TypeRef = string;
 
-type TypeDef =
-  | PrimitiveType
-  | RecordType
-  | UnionType
-  | ResultType
+type TypeDef = PrimitiveType | RecordType | UnionType | ResultType;
 ```
 
 ---

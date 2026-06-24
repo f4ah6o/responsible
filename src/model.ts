@@ -1,15 +1,16 @@
 export type Id = string;
 export type TypeRef = string;
 export type BoundaryKey = string;
-export type BoundaryValue = string | number | boolean | readonly BoundaryValue[] | { readonly [key: string]: BoundaryValue };
+export type BoundaryValue =
+  | string
+  | number
+  | boolean
+  | readonly BoundaryValue[]
+  | { readonly [key: string]: BoundaryValue };
 
 export type Responsibility = Readonly<Record<BoundaryKey, BoundaryValue>>;
 
-export type ActivityStatus =
-  | "discovered"
-  | "defined"
-  | "validated"
-  | "automatable";
+export type ActivityStatus = "discovered" | "defined" | "validated" | "automatable";
 
 export type ActivityDef = Readonly<{
   id: Id;

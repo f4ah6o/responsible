@@ -1,7 +1,27 @@
 import "./styles.css";
-import { boundaryOf, formatBoundaryValue, isResponsibilityBoundaryNormalForm, projectByResponsibilityBoundary } from "./index.js";
-import { layoutActivityTreeGraph, layoutProjectedGraph, type GraphLayout, type GraphNode } from "./graph.js";
-import type { ActivityDef, BoundaryExpr, BoundaryValue, FlowDef, Id, ProcessModel, ProcessView, ProjectedActivity, ViewDef } from "./model.js";
+import {
+  boundaryOf,
+  formatBoundaryValue,
+  isResponsibilityBoundaryNormalForm,
+  projectByResponsibilityBoundary,
+} from "./index.js";
+import {
+  layoutActivityTreeGraph,
+  layoutProjectedGraph,
+  type GraphLayout,
+  type GraphNode,
+} from "./graph.js";
+import type {
+  ActivityDef,
+  BoundaryExpr,
+  BoundaryValue,
+  FlowDef,
+  Id,
+  ProcessModel,
+  ProcessView,
+  ProjectedActivity,
+  ViewDef,
+} from "./model.js";
 import { rootActivityId, sampleModel } from "./sample.js";
 
 type Screen = "activities" | "boundaries" | "graph";
@@ -17,7 +37,17 @@ const rootElement = document.querySelector<HTMLDivElement>("#app");
 if (!rootElement) throw new Error("#app is required");
 const root = rootElement;
 
-const boundaryOptions: BoundaryExpr[] = ["person", "team", "section", "department", "company", "function", "role", "system", ["project", "function"]];
+const boundaryOptions: BoundaryExpr[] = [
+  "person",
+  "team",
+  "section",
+  "department",
+  "company",
+  "function",
+  "role",
+  "system",
+  ["project", "function"],
+];
 const state: AppState = {
   screen: "graph",
   boundary: "department",
@@ -67,7 +97,10 @@ function render(): void {
   bindEvents();
 }
 
-function renderCurrentScreen(visible: ActivityDef[], selectedActivity: ActivityDef | undefined): string {
+function renderCurrentScreen(
+  visible: ActivityDef[],
+  selectedActivity: ActivityDef | undefined,
+): string {
   if (state.screen === "graph") return renderGraphScreen();
   if (state.screen === "boundaries") return renderBoundaryScreen();
   return renderActivityScreen(visible, selectedActivity);
@@ -95,7 +128,10 @@ function renderBreadcrumbs(): string {
     .join("");
 }
 
-function renderActivityScreen(activities: ActivityDef[], selectedActivity: ActivityDef | undefined): string {
+function renderActivityScreen(
+  activities: ActivityDef[],
+  selectedActivity: ActivityDef | undefined,
+): string {
   return `
     <section class="screen activity-screen" aria-label="Activity view">
       <div class="activity-rail" aria-label="Activity sequence">
@@ -124,12 +160,17 @@ function renderActivityCard(activity: ActivityDef, index: number): string {
 
 function renderActivityInspector(activity: ActivityDef): string {
   const rows = Object.entries(activity.responsibility ?? {})
-    .map(([key, value]) => `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(formatBoundaryValue(value as BoundaryValue))}</td></tr>`)
+    .map(
+      ([key, value]) =>
+        `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(formatBoundaryValue(value as BoundaryValue))}</td></tr>`,
+    )
     .join("");
   const children = activityChildren(activity.id);
   const leaves = leafIdsUnder(activity.id);
   const leafSet = new Set(leaves);
-  const contracts = sampleModel.flows.filter((flow) => leafSet.has(flow.from) || leafSet.has(flow.to));
+  const contracts = sampleModel.flows.filter(
+    (flow) => leafSet.has(flow.from) || leafSet.has(flow.to),
+  );
 
   return `
     <div class="panel">
@@ -159,7 +200,12 @@ function renderActivityInspector(activity: ActivityDef): string {
 }
 
 function renderBoundaryScreen(): string {
-  const view: ViewDef = { id: "current", layout: "lane", boundary: state.boundary, normalForm: "responsibilityBoundary" };
+  const view: ViewDef = {
+    id: "current",
+    layout: "lane",
+    boundary: state.boundary,
+    normalForm: "responsibilityBoundary",
+  };
   const scoped = scopedProcessModel(leafIdsUnder(state.focusActivityId));
   const projected = projectByResponsibilityBoundary(scoped, view);
   const lanes = groupByBoundary(projected);
@@ -184,11 +230,25 @@ function renderBoundaryScreen(): string {
 }
 
 function renderGraphScreen(): string {
-  const view: ViewDef = { id: "current", layout: "lane", boundary: state.boundary, normalForm: "responsibilityBoundary" };
+  const view: ViewDef = {
+    id: "current",
+    layout: "lane",
+    boundary: state.boundary,
+    normalForm: "responsibilityBoundary",
+  };
   const scoped = scopedProcessModel(leafIdsUnder(state.focusActivityId));
   const projected = projectByResponsibilityBoundary(scoped, view);
-  const activityGraph = layoutActivityTreeGraph(sampleModel, rootActivityId, state.focusActivityId, state.selectedActivityId);
-  const projectionGraph = layoutProjectedGraph(projected, sampleModel.activities, state.selectedActivityId);
+  const activityGraph = layoutActivityTreeGraph(
+    sampleModel,
+    rootActivityId,
+    state.focusActivityId,
+    state.selectedActivityId,
+  );
+  const projectionGraph = layoutProjectedGraph(
+    projected,
+    sampleModel.activities,
+    state.selectedActivityId,
+  );
   const focus = sampleModel.activities[state.focusActivityId];
 
   return `
@@ -220,7 +280,12 @@ function renderGraphScreen(): string {
 
 function renderSvgGraph(layout: GraphLayout, label: string): string {
   const byId = new Map(layout.nodes.map((node) => [node.id, node]));
-  const lanes = layout.lanes.map((lane) => `<g class="graph-lane"><rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="22" /><text x="${lane.x + 18}" y="${lane.y + 28}">${escapeHtml(lane.label)}</text></g>`).join("");
+  const lanes = layout.lanes
+    .map(
+      (lane) =>
+        `<g class="graph-lane"><rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="22" /><text x="${lane.x + 18}" y="${lane.y + 28}">${escapeHtml(lane.label)}</text></g>`,
+    )
+    .join("");
   const edges = layout.edges
     .map((edge) => {
       const from = byId.get(edge.from);
@@ -247,8 +312,19 @@ function renderSvgGraph(layout: GraphLayout, label: string): string {
 }
 
 function renderGraphNode(node: GraphNode): string {
-  const classes = ["graph-node", `is-${node.kind}`, node.selected ? "is-selected" : "", node.focusable ? "is-focusable" : ""].filter(Boolean).join(" ");
-  const attrs = node.focusable ? `data-graph-focus-id="${node.id}"` : node.activityId ? `data-activity-id="${node.activityId}"` : "";
+  const classes = [
+    "graph-node",
+    `is-${node.kind}`,
+    node.selected ? "is-selected" : "",
+    node.focusable ? "is-focusable" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const attrs = node.focusable
+    ? `data-graph-focus-id="${node.id}"`
+    : node.activityId
+      ? `data-activity-id="${node.activityId}"`
+      : "";
   const titleLines = splitLabel(node.label, 16);
   const detail = truncate(node.detail, 36);
 
@@ -260,7 +336,10 @@ function renderGraphNode(node: GraphNode): string {
     </g>`;
 }
 
-function edgePoints(from: GraphNode, to: GraphNode): { x1: number; y1: number; x2: number; y2: number } {
+function edgePoints(
+  from: GraphNode,
+  to: GraphNode,
+): { x1: number; y1: number; x2: number; y2: number } {
   const horizontal = Math.abs(from.y - to.y) < 24;
   if (horizontal) {
     const direction = to.x >= from.x ? 1 : -1;
@@ -290,7 +369,10 @@ function renderLane(boundary: string, nodes: ProjectedActivity[]): string {
 
 function renderProjectedNode(node: ProjectedActivity): string {
   const activityIds = node.kind === "atomic" ? [node.activityId] : [...node.activityIds];
-  const title = node.kind === "atomic" ? sampleModel.activities[node.activityId]?.name ?? node.activityId : `${activityIds.length} activities`;
+  const title =
+    node.kind === "atomic"
+      ? (sampleModel.activities[node.activityId]?.name ?? node.activityId)
+      : `${activityIds.length} activities`;
   return `
     <article class="projection-node">
       <div class="node-header"><span>${escapeHtml(node.kind)}</span><strong>${escapeHtml(title)}</strong></div>
@@ -383,7 +465,9 @@ function scopedProcessModel(leafIds: readonly Id[]): ProcessModel {
 
 function bindEvents(): void {
   for (const tab of root.querySelectorAll("[data-screen]")) {
-    tab.addEventListener("click", () => setState({ screen: screenFromValue(tab.getAttribute("data-screen")) }));
+    tab.addEventListener("click", () =>
+      setState({ screen: screenFromValue(tab.getAttribute("data-screen")) }),
+    );
   }
 
   for (const crumb of root.querySelectorAll("[data-focus-id]")) {
@@ -421,7 +505,10 @@ function bindEvents(): void {
 
   root.querySelector<HTMLSelectElement>("#boundary-select")?.addEventListener("change", (event) => {
     const label = (event.currentTarget as HTMLSelectElement).value;
-    setState({ boundary: boundaryOptions.find((boundary) => boundaryLabel(boundary) === label) ?? "department" });
+    setState({
+      boundary:
+        boundaryOptions.find((boundary) => boundaryLabel(boundary) === label) ?? "department",
+    });
   });
 }
 
@@ -448,7 +535,12 @@ function boundaryLabel(boundary: BoundaryExpr): string {
 }
 
 function escapeHtml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 render();
