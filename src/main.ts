@@ -57,7 +57,6 @@ const state: AppState = {
 };
 
 function render(): void {
-  const selectedLeaf = resolveSelectedLeaf();
   const leafCount = leafIdsUnder(rootActivityId).length;
   const projected = projectCurrent();
   const zoom = currentZoomDescriptor();
@@ -103,7 +102,7 @@ function render(): void {
         <div class="breadcrumbs">${renderDrillBreadcrumbs()}</div>
         <div class="zoom-scope"><span>decomposition scope</span><strong>${escapeHtml(drillActivity?.name ?? state.drillActivityId)}</strong></div>
       </section>
-      ${renderCurrentScreen(selectedLeaf)}
+      ${renderCurrentScreen()}
     </main>`;
 
   bindEvents();
@@ -140,10 +139,10 @@ function currentZoomDescriptor(): ZoomDescriptor {
   };
 }
 
-function renderCurrentScreen(selectedLeaf: Id | undefined): string {
+function renderCurrentScreen(): string {
   if (state.screen === "graph") return renderGraphScreen();
   if (state.screen === "boundaries") return renderBoundaryScreen();
-  return renderActivityScreen(selectedLeaf);
+  return renderActivityScreen();
 }
 
 function tabButton(screen: Screen, label: string): string {
@@ -168,12 +167,10 @@ function renderDrillBreadcrumbs(): string {
     .join("");
 }
 
-function renderActivityScreen(selectedLeaf: Id | undefined): string {
+function renderActivityScreen(): string {
   const activities = drillChildren();
   const selectedActivity =
-    (selectedLeaf ? sampleModel.activities[selectedLeaf] : undefined) ??
-    sampleModel.activities[state.selectedActivityId] ??
-    activities[0];
+    sampleModel.activities[state.selectedActivityId] ?? activities[0];
 
   return `
     <section class="screen activity-screen" aria-label="Activity decomposition view">
@@ -278,7 +275,7 @@ function renderGraphScreen(): string {
   const projectionGraph = layoutProjectedGraph(
     projected,
     sampleModel.activities,
-    state.selectedActivityId,
+    resolveSelectedLeaf() ?? state.selectedActivityId,
   );
 
   return `
