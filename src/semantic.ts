@@ -28,7 +28,9 @@ export type Effect = Readonly<{
 export type ContractResult = { ok: true } | { ok: false; reason: string };
 
 export function leafActivityIds(model: ProcessModel, scopeId?: Id): readonly Id[] {
-  const candidateIds = scopeId ? descendantsOf(model, scopeId) : Object.keys(model.activities);
+  const candidateIds = scopeId
+    ? [scopeId, ...descendantsOf(model, scopeId)]
+    : Object.keys(model.activities);
   const result: Id[] = [];
 
   for (const id of candidateIds) {
@@ -67,14 +69,19 @@ export function validateDirectedEffect(
     return { ok: false, reason: `unknown source activityId: ${effect.source.activityId}` };
   }
 
-  const known = knownBoundaryIds(model, boundary);
-
-  if (!known.has(effect.source.boundary)) {
-    return { ok: false, reason: `unknown source boundary: ${effect.source.boundary}` };
+  const actualSourceBoundary = boundaryOf(sourceActivity, boundary);
+  if (actualSourceBoundary !== effect.source.boundary) {
+    return {
+      ok: false,
+      reason: `source boundary mismatch: activity "${effect.source.activityId}" projects to "${actualSourceBoundary}" but the effect declares "${effect.source.boundary}"`,
+    };
   }
 
-  if (effect.delivery.mode === "directed" && !known.has(effect.delivery.target)) {
-    return { ok: false, reason: `unknown directed target boundary: ${effect.delivery.target}` };
+  if (effect.delivery.mode === "directed") {
+    const known = knownBoundaryIds(model, boundary);
+    if (!known.has(effect.delivery.target)) {
+      return { ok: false, reason: `unknown directed target boundary: ${effect.delivery.target}` };
+    }
   }
 
   return { ok: true };

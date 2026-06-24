@@ -180,7 +180,7 @@ Current v0 implements only the assertable subset of the semantic core in `docs/s
 
 - `INV-1`–`INV-6` are covered by executable `node:test` tests under `src/__tests__/`.
 - Linear-only: branching, merging, cycles, multiple starts, and disconnected flows are rejected.
-- `Effect` is plain, JSON-serializable data with a `validateDirectedEffect` helper. It is not an execution API and is not embedded in the `responsible.v0` model schema.
+- `Effect` is plain, JSON-serializable data. `validateDirectedEffect` checks that the declared source boundary matches the source Activity's projection under the selected boundary, and that a directed target is a known boundary. It is not an execution API and `Effect` is not embedded in the `responsible.v0` model schema.
 - No execution API: `World`, `ActivityResult`, `seq`, and runtime `requires` / `ensures` predicate checking are future semantic targets, not v0 API.
 - No inverse projection API: RBNF collapse is treated as non-reversible.
 

@@ -17,5 +17,8 @@
     "typescript": "latest",
     "vite-plus": "latest"
   },
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "packageManager": "pnpm@10.14.0"
 }

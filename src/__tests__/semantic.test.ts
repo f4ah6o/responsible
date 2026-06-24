@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -116,6 +117,10 @@ test("leafActivityIds with scope returns leaves under the scope", () => {
   assert.deepEqual(leafActivityIds(modelWithParent, "parent"), ["a", "b"]);
 });
 
+test("leafActivityIds with a leaf scope returns the scope itself", () => {
+  assert.deepEqual(leafActivityIds(modelWithParent, "a"), ["a"]);
+});
+
 test("INV-3: validateDirectedEffect accepts a known directed effect", () => {
   const result = validateDirectedEffect(modelWithParent, "team", {
     source: { activityId: "a", boundary: "sales" },
@@ -157,7 +162,7 @@ test("INV-3: validateDirectedEffect rejects an unknown source activityId", () =>
   if (!result.ok) assert.match(result.reason, /unknown source activityId/);
 });
 
-test("INV-3: validateDirectedEffect rejects an unknown source boundary", () => {
+test("INV-3: validateDirectedEffect rejects a source boundary that does not match the activity", () => {
   const result = validateDirectedEffect(modelWithParent, "team", {
     source: { activityId: "a", boundary: "marketing" },
     payload: { kind: "data", schema: "s" },
@@ -165,7 +170,18 @@ test("INV-3: validateDirectedEffect rejects an unknown source boundary", () => {
   });
 
   assert.equal(result.ok, false);
-  if (!result.ok) assert.match(result.reason, /unknown source boundary/);
+  if (!result.ok) assert.match(result.reason, /source boundary mismatch/);
+});
+
+test("INV-3: validateDirectedEffect rejects a source boundary claimed from a different activity", () => {
+  const result = validateDirectedEffect(modelWithParent, "team", {
+    source: { activityId: "a", boundary: "eng" },
+    payload: { kind: "data", schema: "s" },
+    delivery: { mode: "broadcast" },
+  });
+
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.reason, /source boundary mismatch/);
 });
 
 test("INV-3: validateDirectedEffect rejects an unknown directed target boundary", () => {

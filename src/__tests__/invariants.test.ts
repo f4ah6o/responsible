@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -81,7 +82,7 @@ test("INV-1: projection does not mutate the source model", () => {
   assert.deepEqual(linearModel, snapshot);
 });
 
-test("INV-2: core public API exposes no mutation entry points", () => {
+test("INV-2: core public API exposes no mutation entry points (heuristic proxy via export-name pattern)", () => {
   const mutatorPattern =
     /^(set|update|mutate|assign|apply|patch|commit|delete|remove|write|push|pop|splice)/i;
   const offenders = Object.keys(api).filter((name) => mutatorPattern.test(name));
@@ -114,7 +115,7 @@ test("INV-4: projected source activities are a subset of leaf activity ids", () 
   }
 });
 
-test("INV-5: no restoration / inverse projection API is exported", () => {
+test("INV-5: no restoration / inverse projection API is exported (heuristic proxy via export-name pattern)", () => {
   const restorePattern = /restore|inverse|unproject|reverse|deproject|expand/i;
   const offenders = Object.keys(api).filter((name) => restorePattern.test(name));
 
