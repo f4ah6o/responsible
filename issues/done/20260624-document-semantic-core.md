@@ -1,11 +1,12 @@
 # semantic core 文書を実装可能な設計規則として整備する
 
-Status: polished
-Model: unknown
+Status: done
+Model: GPT-5
 Created: 2026-06-24
 Updated: 2026-06-24
 Branch: docs/2-document-semantic-core
 Source:
+
 - https://github.com/f4ah6o/responsible/issues/2
 
 ## 概要
@@ -92,16 +93,13 @@ semantic core の normative な定義と、理論背景を説明する informati
 - Activity は effectful computation として読めること。
 
 ```ts
-type Activity<I, O> = (
-  world: World,
-  input: I,
-) => ActivityResult<O>
+type Activity<I, O> = (world: World, input: I) => ActivityResult<O>;
 
 type ActivityResult<O> = {
-  world: World
-  output: O
-  effects: Effect[]
-}
+  world: World;
+  output: O;
+  effects: Effect[];
+};
 ```
 
 - 逐次合成は通常の関数合成ではなく、world と effects を渡す Kleisli composition として定義すること。
@@ -110,26 +108,24 @@ type ActivityResult<O> = {
 const seq =
   <A, B, C>(f: Activity<A, B>, g: Activity<B, C>): Activity<A, C> =>
   (world, input) => {
-    const r1 = f(world, input)
-    const r2 = g(r1.world, r1.output)
+    const r1 = f(world, input);
+    const r2 = g(r1.world, r1.output);
 
     return {
       world: r2.world,
       output: r2.output,
       effects: [...r1.effects, ...r2.effects],
-    }
-  }
+    };
+  };
 ```
 
 - v0 の predicate は opaque runtime predicate であり、`ensures_A => requires_B` の静的判定はできないこと。
 
 ```ts
-type ContractResult =
-  | { ok: true }
-  | { ok: false; reason: string }
+type ContractResult = { ok: true } | { ok: false; reason: string };
 
-type Requires<I> = (world: World, input: I) => ContractResult
-type Ensures<O> = (world: World, output: O) => ContractResult
+type Requires<I> = (world: World, input: I) => ContractResult;
+type Ensures<O> = (world: World, output: O) => ContractResult;
 ```
 
 - `requires` は Activity 実行前の前提、`ensures` は Activity 完了後に model world で成立する事実、`effects` は `ensures` のうち responsibility boundary を越えて観測可能になる projection、`mutation` は implementation-local data change であること。
@@ -138,7 +134,7 @@ type Ensures<O> = (world: World, output: O) => ContractResult
 
 ```ts
 interface BoundaryProjection<In, Out> {
-  project(input: In, boundary: BoundaryId): Out
+  project(input: In, boundary: BoundaryId): Out;
 }
 ```
 
@@ -153,18 +149,16 @@ interface BoundaryProjection<In, Out> {
 ```ts
 type Effect = {
   source: {
-    activityId: ActivityId
-    boundary: BoundaryId
-  }
+    activityId: ActivityId;
+    boundary: BoundaryId;
+  };
   payload:
     | { kind: "domain-fact"; schema: SchemaRef }
     | { kind: "command"; schema: SchemaRef }
-    | { kind: "data"; schema: SchemaRef }
+    | { kind: "data"; schema: SchemaRef };
   delivery: // boundary-crossing visibility rule
-    | { mode: "directed"; target: BoundaryId }
-    | { mode: "broadcast" }
-    | { mode: "observable" }
-}
+    { mode: "directed"; target: BoundaryId } | { mode: "broadcast" } | { mode: "observable" };
+};
 ```
 
 - `INV-*` として、少なくとも次の invariant を列挙すること。
@@ -243,6 +237,17 @@ type Effect = {
 
 ## 注記
 
+Implementation plan and progress:
+
+- [x] Move issue to `issues/doing` and use it as the live handoff/progress artifact.
+- [x] Add normative semantic core documentation in `docs/semantic-core.md`.
+- [x] Add informative theory mapping in `docs/theory.md`.
+- [x] Update README project positioning and links.
+- [x] Clean generated citation tokens from `docs/research-report.md`.
+- [x] Add `CHANGES.md` entry for the documentation change.
+- [x] Run acceptance checks and record results.
+- [x] Move this issue to `done` when all acceptance criteria are met.
+
 Classification:
 
 - Work type: documentation / semantic specification.
@@ -263,10 +268,14 @@ GitHub Issue metadata:
 State transition:
 
 - Previous path: `issues/open/20260624-document-semantic-core.md`
-- Current path: `issues/polished/20260624-document-semantic-core.md`
+- Current path: `issues/done/20260624-document-semantic-core.md`
 - Reason: scope, constraints, acceptance criteria, and verification plan are specific enough to begin implementation.
 - Unresolved questions: none blocking implementation.
 
 GitHub close comment:
 
 - Captured as local issue. issues/open/20260624-document-semantic-core.md
+- 2026-06-24: Implementation started; plan saved in doing as live handoff/progress artifact.
+- 2026-06-24: Verification passed: `pnpm run check`, `git diff --check`, generated citation-token search, project-position search, semantic-core concept search, theory mapping search, and current-issue validation.
+- 2026-06-24: Repository-wide issue validation still reports pre-existing formatting problems in `issues/open/20260624-add-reference-implementation-tests.md`; the current issue validates cleanly.
+- 2026-06-24: Implemented semantic-core documentation, theory mapping, README positioning, research citation cleanup, CHANGES entry, and verification checks.

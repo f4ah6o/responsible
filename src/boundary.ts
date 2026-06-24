@@ -2,13 +2,18 @@ import type { ActivityDef, BoundaryExpr, BoundaryValue } from "./model.js";
 
 export function boundaryOf(activity: ActivityDef, boundary: BoundaryExpr): string {
   if (Array.isArray(boundary)) {
-    return boundary.map((key) => `${key}:${formatBoundaryValue(resolveBoundaryValue(activity, key))}`).join("|");
+    return boundary
+      .map((key) => `${key}:${formatBoundaryValue(resolveBoundaryValue(activity, key))}`)
+      .join("|");
   }
 
   return formatBoundaryValue(resolveBoundaryValue(activity, boundary));
 }
 
-export function resolveBoundaryValue(activity: ActivityDef, key: string): BoundaryValue | undefined {
+export function resolveBoundaryValue(
+  activity: ActivityDef,
+  key: string,
+): BoundaryValue | undefined {
   const responsibility = activity.responsibility;
   if (!responsibility) return undefined;
 
@@ -42,7 +47,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isBoundaryValue(value: unknown): value is BoundaryValue {
   if (value === undefined) return true;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+    return true;
   if (Array.isArray(value)) return value.every(isBoundaryValue);
   if (isRecord(value)) return Object.values(value).every(isBoundaryValue);
   return false;

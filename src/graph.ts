@@ -43,7 +43,12 @@ const marginY = 72;
 const laneHeight = 126;
 const laneGap = 148;
 
-export function layoutActivityTreeGraph(model: ProcessModel, rootId: Id, focusId: Id, selectedId: Id): GraphLayout {
+export function layoutActivityTreeGraph(
+  model: ProcessModel,
+  rootId: Id,
+  focusId: Id,
+  selectedId: Id,
+): GraphLayout {
   const levels: Id[][] = [];
   const edges: GraphEdge[] = [];
   const seen = new Set<Id>();
@@ -96,9 +101,16 @@ export function layoutActivityTreeGraph(model: ProcessModel, rootId: Id, focusId
   return { width, height, lanes: [], nodes, edges };
 }
 
-export function layoutProjectedGraph(view: ProcessView, activities: Readonly<Record<Id, ActivityDef>>, selectedId: Id): GraphLayout {
+export function layoutProjectedGraph(
+  view: ProcessView,
+  activities: Readonly<Record<Id, ActivityDef>>,
+  selectedId: Id,
+): GraphLayout {
   const laneLabels = unique(view.activities.map((activity) => activity.boundary));
-  const width = Math.max(760, marginX * 2 + Math.max(0, view.activities.length - 1) * horizontalGap);
+  const width = Math.max(
+    760,
+    marginX * 2 + Math.max(0, view.activities.length - 1) * horizontalGap,
+  );
   const height = Math.max(280, marginY * 2 + Math.max(1, laneLabels.length) * laneGap);
   const laneIndex = new Map(laneLabels.map((label, index) => [label, index]));
   const lanes: GraphLane[] = laneLabels.map((label, index) => ({
@@ -113,7 +125,10 @@ export function layoutProjectedGraph(view: ProcessView, activities: Readonly<Rec
   const nodes: GraphNode[] = view.activities.map((node, index) => {
     const activityIds = node.kind === "atomic" ? [node.activityId] : [...node.activityIds];
     const firstId = activityIds[0] ?? node.id;
-    const label = node.kind === "atomic" ? activities[firstId]?.name ?? firstId : `${activityIds.length} activities`;
+    const label =
+      node.kind === "atomic"
+        ? (activities[firstId]?.name ?? firstId)
+        : `${activityIds.length} activities`;
     const detail = `${node.boundary} / ${node.input} → ${node.output}`;
     const row = laneIndex.get(node.boundary) ?? 0;
 

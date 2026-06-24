@@ -1,5 +1,12 @@
 import { boundaryOf } from "./boundary.js";
-import type { Id, ProcessModel, ProcessView, ProjectedActivity, ProjectedFlow, ViewDef } from "./model.js";
+import type {
+  Id,
+  ProcessModel,
+  ProcessView,
+  ProjectedActivity,
+  ProjectedFlow,
+  ViewDef,
+} from "./model.js";
 
 export function projectByResponsibilityBoundary(model: ProcessModel, view: ViewDef): ProcessView {
   assertLaneResponsibilityView(view);
@@ -98,7 +105,10 @@ function composeRun(model: ProcessModel, activityIds: Id[], boundary: string): P
   };
 }
 
-function collapseFlows(model: ProcessModel, sourceToProjected: ReadonlyMap<Id, Id>): ProjectedFlow[] {
+function collapseFlows(
+  model: ProcessModel,
+  sourceToProjected: ReadonlyMap<Id, Id>,
+): ProjectedFlow[] {
   const seen = new Set<string>();
   const flows: ProjectedFlow[] = [];
 
@@ -146,7 +156,9 @@ function linearOrder(model: ProcessModel): Id[] {
 
   for (const id of ids) {
     if ((incoming.get(id)?.length ?? 0) > 1 || (outgoing.get(id)?.length ?? 0) > 1) {
-      throw new Error("v0 projection supports linear flows only; branching and merging require graph quotient projection");
+      throw new Error(
+        "v0 projection supports linear flows only; branching and merging require graph quotient projection",
+      );
     }
   }
 

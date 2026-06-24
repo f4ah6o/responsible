@@ -4,7 +4,6 @@
   "private": true,
   "description": "Reference implementation for typed activity and responsibility-boundary process models.",
   "type": "module",
-  "packageManager": "pnpm@10.14.0",
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
@@ -15,5 +14,6 @@
   "devDependencies": {
     "typescript": "latest",
     "vite-plus": "latest"
-  }
+  },
+  "packageManager": "pnpm@10.14.0"
 }

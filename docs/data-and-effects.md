@@ -184,16 +184,16 @@ Japanese equivalents:
 
 Minimum vocabulary for how Activities act on Data:
 
-| Action | Meaning |
-| --- | --- |
+| Action  | Meaning                                               |
+| ------- | ----------------------------------------------------- |
 | Observe | 観測する。Activity が判断材料として Data を認識する。 |
-| Create | 作成する。 |
-| Change | 変更する。内部状態を変える。 |
-| Delete | 削除する。 |
-| Derive | 派生する。既存 Data から別の Data を作る。 |
-| Publish | 公開する。境界の外から見えるようにする。 |
-| Receive | 受領する。境界の外から入ってきたものを受け取る。 |
-| Archive | 保管する。 |
+| Create  | 作成する。                                            |
+| Change  | 変更する。内部状態を変える。                          |
+| Delete  | 削除する。                                            |
+| Derive  | 派生する。既存 Data から別の Data を作る。            |
+| Publish | 公開する。境界の外から見えるようにする。              |
+| Receive | 受領する。境界の外から入ってきたものを受け取る。      |
+| Archive | 保管する。                                            |
 
 ## State transition
 
