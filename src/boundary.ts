@@ -1,7 +1,7 @@
 import type { ActivityDef, BoundaryExpr, BoundaryValue } from "./model.js";
 
 export function boundaryOf(activity: ActivityDef, boundary: BoundaryExpr): string {
-  if (Array.isArray(boundary)) {
+  if (typeof boundary !== "string") {
     return boundary
       .map((key) => `${key}:${formatBoundaryValue(resolveBoundaryValue(activity, key))}`)
       .join("|");
