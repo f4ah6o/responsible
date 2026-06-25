@@ -25,6 +25,14 @@ import { projectionToFlow } from "./projectionToFlow";
 
 const DEFAULT_ZOOM_LEVEL = 1;
 
+const BOUNDARY_LABELS: Record<string, string> = {
+  company: "会社",
+  department: "部門",
+  section: "課・セクション",
+  team: "チーム",
+  person: "担当者",
+};
+
 function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
   return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
 }
@@ -71,6 +79,7 @@ export function ProcessViewer() {
 
   const boundary: BoundaryExpr = boundaryForLevel(zoomLevel);
   const boundaryKey = HIERARCHICAL_BOUNDARY_ORDER[zoomLevel] ?? "boundary";
+  const boundaryLabel = BOUNDARY_LABELS[boundaryKey] ?? boundaryKey;
 
   const projected = useMemo(() => {
     const scoped = scopedProcessModel(model, leafIdsUnder(model, rootId));
@@ -126,39 +135,39 @@ export function ProcessViewer() {
     <main className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">responsible reference implementation</p>
+          <p className="eyebrow">responsible リファレンス実装</p>
           <h1>Activity と責任境界で業務プロセスを可視化する</h1>
           <p className="lead">
-            Activity を node、責任境界を Lane、Lane をまたぐ接続を責任境界越えとして 1
-            画面で表示する。 viewport の pan / zoom で全体俯瞰と詳細確認を切り替え、boundary zoom
-            で責任境界レベルを切り替える。
+            Activity をノード、責任境界をレーンとして 1 画面に表示する。レーンをまたぐ接続は、
+            責任境界を越える受け渡しとして表す。画面上の拡大縮小は表示の確認用であり、
+            境界ズームは会社・部門・課・チーム・担当者のどの粒度で見るかを切り替える。
           </p>
         </div>
-        <div className="summary-card" aria-label="model summary">
+        <div className="summary-card" aria-label="モデル概要">
           <span>{leafCount}</span>
-          <small>leaf activities</small>
+          <small>末端 Activity</small>
           <span>{projected.activities.length}</span>
-          <small>projected nodes</small>
+          <small>投影ノード</small>
         </div>
       </header>
-      <nav className="toolbar" aria-label="viewer controls">
+      <nav className="toolbar" aria-label="ビューア操作">
         <ProcessSelect
           processes={sampleProcesses}
           value={sample.id}
           onChange={handleProcessChange}
         />
         <div className="boundary-key-readout">
-          <span>boundary level</span>
-          <strong>{boundaryKey}</strong>
+          <span>責任境界レベル</span>
+          <strong>{boundaryLabel}</strong>
         </div>
       </nav>
       <BoundaryZoomControl level={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
-      <section className="viewer-screen" aria-label="Process viewer">
+      <section className="viewer-screen" aria-label="プロセスビューア">
         <FlowCanvas nodes={flow.nodes} edges={flow.edges} onNodeClick={handleNodeClick} />
         <Inspector
           activity={selectedNode}
           activities={model.activities}
-          boundaryKey={boundaryKey}
+          boundaryLabel={boundaryLabel}
         />
       </section>
     </main>
