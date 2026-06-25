@@ -23,7 +23,7 @@ export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoom
   const canOut = canZoomOut(level);
 
   return (
-    <section className="zoom-bar" aria-label="責任境界ズーム">
+    <section className="zoom-bar overlay-top-right" aria-label="責任境界ズーム">
       <button className="secondary-action" onClick={onZoomOut} disabled={!canOut}>
         粗く見る
       </button>

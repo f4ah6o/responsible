@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 
 import {
-  HIERARCHICAL_BOUNDARY_ORDER,
   boundaryForLevel,
   canZoomIn,
   canZoomOut,
@@ -19,19 +18,10 @@ import type {
 import { sampleProcesses } from "../sample.js";
 import { BoundaryZoomControl } from "./BoundaryZoomControl";
 import { FlowCanvas } from "./FlowCanvas";
-import { Inspector } from "./Inspector";
 import { ProcessSelect } from "./ProcessSelect";
 import { projectionToFlow } from "./projectionToFlow";
 
 const DEFAULT_ZOOM_LEVEL = 1;
-
-const BOUNDARY_LABELS: Record<string, string> = {
-  company: "会社",
-  department: "部門",
-  section: "課・セクション",
-  team: "チーム",
-  person: "担当者",
-};
 
 function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
   return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
@@ -78,8 +68,6 @@ export function ProcessViewer() {
   const rootId = sample.rootActivityId;
 
   const boundary: BoundaryExpr = boundaryForLevel(zoomLevel);
-  const boundaryKey = HIERARCHICAL_BOUNDARY_ORDER[zoomLevel] ?? "boundary";
-  const boundaryLabel = BOUNDARY_LABELS[boundaryKey] ?? boundaryKey;
 
   const projected = useMemo(() => {
     const scoped = scopedProcessModel(model, leafIdsUnder(model, rootId));
@@ -96,14 +84,6 @@ export function ProcessViewer() {
     () => projectionToFlow(projected, model.activities, selectedLeafId),
     [projected, model, selectedLeafId],
   );
-
-  const selectedNode = useMemo(
-    () =>
-      projected.activities.find((activity) => sourceIdsOf(activity).includes(selectedLeafId ?? "")),
-    [projected, selectedLeafId],
-  );
-
-  const leafCount = useMemo(() => leafIdsUnder(model, rootId).length, [model, rootId]);
 
   const handleNodeClick = useCallback(
     (nodeId: string) => {
@@ -133,43 +113,14 @@ export function ProcessViewer() {
 
   return (
     <main className="shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">responsible リファレンス実装</p>
-          <h1>Activity と責任境界で業務プロセスを可視化する</h1>
-          <p className="lead">
-            Activity をノード、責任境界をレーンとして 1 画面に表示する。レーンをまたぐ接続は、
-            責任境界を越える受け渡しとして表す。画面上の拡大縮小は表示の確認用であり、
-            境界ズームは会社・部門・課・チーム・担当者のどの粒度で見るかを切り替える。
-          </p>
-        </div>
-        <div className="summary-card" aria-label="モデル概要">
-          <span>{leafCount}</span>
-          <small>末端 Activity</small>
-          <span>{projected.activities.length}</span>
-          <small>投影ノード</small>
-        </div>
-      </header>
-      <nav className="toolbar" aria-label="ビューア操作">
+      <FlowCanvas nodes={flow.nodes} edges={flow.edges} onNodeClick={handleNodeClick}>
         <ProcessSelect
           processes={sampleProcesses}
           value={sample.id}
           onChange={handleProcessChange}
         />
-        <div className="boundary-key-readout">
-          <span>責任境界レベル</span>
-          <strong>{boundaryLabel}</strong>
-        </div>
-      </nav>
-      <BoundaryZoomControl level={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
-      <section className="viewer-screen" aria-label="プロセスビューア">
-        <FlowCanvas nodes={flow.nodes} edges={flow.edges} onNodeClick={handleNodeClick} />
-        <Inspector
-          activity={selectedNode}
-          activities={model.activities}
-          boundaryLabel={boundaryLabel}
-        />
-      </section>
+        <BoundaryZoomControl level={zoomLevel} onZoomIn={handleZoomIn} onZoomOut={handleZoomOut} />
+      </FlowCanvas>
     </main>
   );
 }

@@ -1,8 +1,8 @@
+import React from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlow,
   type Edge,
   type Node,
@@ -32,9 +32,10 @@ export type FlowCanvasProps = {
   nodes: Node[];
   edges: Edge[];
   onNodeClick: (nodeId: string) => void;
+  children?: React.ReactNode;
 };
 
-export function FlowCanvas({ nodes, edges, onNodeClick }: FlowCanvasProps) {
+export function FlowCanvas({ nodes, edges, onNodeClick, children }: FlowCanvasProps) {
   return (
     <div className="flow-canvas">
       <ReactFlow
@@ -52,8 +53,8 @@ export function FlowCanvas({ nodes, edges, onNodeClick }: FlowCanvasProps) {
       >
         <Background variant={BackgroundVariant.Dots} gap={24} />
         <Controls showInteractive={false} />
-        <MiniMap pannable={true} zoomable={true} />
       </ReactFlow>
+      {children}
     </div>
   );
 }
