@@ -6,6 +6,7 @@ Created: 2026-06-24
 Updated: 2026-06-24
 Branch: docs/20260624-clarify-irrational-assumptions
 Source:
+
 - https://github.com/f4ah6o/responsible/issues/10
 
 ## 概要
