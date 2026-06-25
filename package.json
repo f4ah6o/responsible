@@ -2,7 +2,7 @@
   "name": "responsible",
   "version": "0.0.0",
   "private": true,
-  "description": "Reference implementation for typed activity and responsibility-boundary process models.",
+  "description": "型付き Activity と責任境界による業務プロセスモデルのリファレンス実装。",
   "type": "module",
   "scripts": {
     "dev": "vp dev",
