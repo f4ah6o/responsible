@@ -89,16 +89,17 @@ Source:
 
 **1. ソフトウェア開発プロセス**（`company` = `Acme Software`、代表サンプル）
 
-| Activity | department | section | team | person |
-|---|---|---|---|---|
-| Issue triage | Product | Product Management | Triage | Alice |
-| Design | Engineering | Architecture | Design | Bob |
-| Implementation | Engineering | Application | Feature | Carol |
-| Review | Engineering | Application | Feature | Dan |
-| Test | Quality | QA | Test | Erin |
-| Release | Platform | Release Eng | Ops | Frank |
+| Activity       | department  | section            | team    | person |
+| -------------- | ----------- | ------------------ | ------- | ------ |
+| Issue triage   | Product     | Product Management | Triage  | Alice  |
+| Design         | Engineering | Architecture       | Design  | Bob    |
+| Implementation | Engineering | Application        | Feature | Carol  |
+| Review         | Engineering | Application        | Feature | Dan    |
+| Test           | Quality     | QA                 | Test    | Erin   |
+| Release        | Platform    | Release Eng        | Ops     | Frank  |
 
 projected boundary 列（normalize 後 = 隣接同値を合成）:
+
 - `company`: `["Acme Software"]`
 - `department`: `["Product", "Engineering", "Quality", "Platform"]`
 - `section`: `["Product Management", "Architecture", "Application", "QA", "Release Eng"]`
@@ -109,16 +110,17 @@ projected boundary 列（normalize 後 = 隣接同値を合成）:
 
 **2. ドキュメント作成・レビュー・公開プロセス**（`company` = `Beacon Media`）
 
-| Activity | department | section | team | person |
-|---|---|---|---|---|
-| Draft | Authoring | Writers | Docs | Mia |
-| Review | Authoring | Editors | Review | Noah |
-| Revise | Authoring | Writers | Docs | Mia |
-| Approve | Governance | Compliance | Approval | Olivia |
-| Publish | Platform | Web | Publishing | Pavel |
-| Archive | Platform | Records | Archive | Quinn |
+| Activity | department | section    | team       | person |
+| -------- | ---------- | ---------- | ---------- | ------ |
+| Draft    | Authoring  | Writers    | Docs       | Mia    |
+| Review   | Authoring  | Editors    | Review     | Noah   |
+| Revise   | Authoring  | Writers    | Docs       | Mia    |
+| Approve  | Governance | Compliance | Approval   | Olivia |
+| Publish  | Platform   | Web        | Publishing | Pavel  |
+| Archive  | Platform   | Records    | Archive    | Quinn  |
 
 projected boundary 列:
+
 - `company`: `["Beacon Media"]`
 - `department`: `["Authoring", "Governance", "Platform"]`
 - `section`: `["Writers", "Editors", "Writers", "Compliance", "Web", "Records"]`
@@ -129,16 +131,17 @@ projected boundary 列:
 
 **3. AI agent / tool execution process**（`company` = `Agent Platform`）
 
-| Activity | department | section | team | person |
-|---|---|---|---|---|
-| User request | Interface | Frontend | Chat | Gateway |
-| Context collection | Runtime | Retrieval | Context | Retriever |
-| Planning | Runtime | Reasoning | Planner | Planner |
-| Tool execution | Runtime | Execution | Tools | Executor |
-| Verification | Runtime | Reasoning | Verifier | Verifier |
-| Response | Interface | Frontend | Chat | Gateway |
+| Activity           | department | section   | team     | person    |
+| ------------------ | ---------- | --------- | -------- | --------- |
+| User request       | Interface  | Frontend  | Chat     | Gateway   |
+| Context collection | Runtime    | Retrieval | Context  | Retriever |
+| Planning           | Runtime    | Reasoning | Planner  | Planner   |
+| Tool execution     | Runtime    | Execution | Tools    | Executor  |
+| Verification       | Runtime    | Reasoning | Verifier | Verifier  |
+| Response           | Interface  | Frontend  | Chat     | Gateway   |
 
 projected boundary 列:
+
 - `company`: `["Agent Platform"]`
 - `department`: `["Interface", "Runtime", "Interface"]`
 - `section`: `["Frontend", "Retrieval", "Reasoning", "Execution", "Reasoning", "Frontend"]`
@@ -190,9 +193,14 @@ src/
 **`src/sample.ts` の export 形**
 
 ```ts
-export type SampleProcess = Readonly<{ id: string; title: string; rootActivityId: Id; model: ProcessModel }>;
-export const sampleProcesses: readonly SampleProcess[];   // [software, document, aiAgent] の順
-export const rootActivityId: Id;      // = sampleProcesses[0].rootActivityId（代表＝ソフトウェア開発、テスト後方互換）
+export type SampleProcess = Readonly<{
+  id: string;
+  title: string;
+  rootActivityId: Id;
+  model: ProcessModel;
+}>;
+export const sampleProcesses: readonly SampleProcess[]; // [software, document, aiAgent] の順
+export const rootActivityId: Id; // = sampleProcesses[0].rootActivityId（代表＝ソフトウェア開発、テスト後方互換）
 export const sampleModel: ProcessModel; // = sampleProcesses[0].model（同上）
 ```
 

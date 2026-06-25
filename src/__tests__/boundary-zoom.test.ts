@@ -19,20 +19,14 @@ import {
   zoomIn,
   zoomOut,
 } from "./../../src/index.js";
-import { rootActivityId, sampleModel } from "./../../src/sample.js";
+import { rootActivityId, sampleModel, sampleProcesses } from "./../../src/sample.js";
 
 const EXPECTED_PROJECTION_BOUNDARIES: Record<string, string[]> = {
-  company: ["Example Construction", "Partner Company", "Example Construction"],
-  department: ["Sales Department", "Construction Department", "Administration Department"],
-  section: [
-    "Sales Section",
-    "Estimation Section",
-    "Sales Section",
-    "Construction Section",
-    "Procurement Section",
-    "Construction Section",
-    "Accounting Section",
-  ],
+  company: ["Acme Software"],
+  department: ["Product", "Engineering", "Quality", "Platform"],
+  section: ["Product Management", "Architecture", "Application", "QA", "Release Eng"],
+  team: ["Triage", "Design", "Feature", "Test", "Ops"],
+  person: ["Alice", "Bob", "Carol", "Dan", "Erin", "Frank"],
 };
 
 function scopedProcessModel(model: ProcessModel, leafIds: readonly string[]): ProcessModel {
@@ -168,13 +162,14 @@ test("Responsibility Boundary Normal Form is maintained at every hierarchical le
   }
 });
 
-test("company / department / section projection sequences match the expected flow order", () => {
-  assert.deepEqual(projectedBoundarySequence("company"), EXPECTED_PROJECTION_BOUNDARIES.company);
-  assert.deepEqual(
-    projectedBoundarySequence("department"),
-    EXPECTED_PROJECTION_BOUNDARIES.department,
-  );
-  assert.deepEqual(projectedBoundarySequence("section"), EXPECTED_PROJECTION_BOUNDARIES.section);
+test("each hierarchical level projection sequence matches the expected flow order", () => {
+  for (const [boundary, expected] of Object.entries(EXPECTED_PROJECTION_BOUNDARIES)) {
+    assert.deepEqual(
+      projectedBoundarySequence(boundary),
+      expected,
+      `projection sequence mismatch at level ${boundary}`,
+    );
+  }
 });
 
 test("person level projects every leaf because no two consecutive leaves share a person", () => {
@@ -182,10 +177,59 @@ test("person level projects every leaf because no two consecutive leaves share a
   assert.equal(sequence.length, leafIdsUnder(sampleModel, rootActivityId).length);
 });
 
-test("zooming one step down expands a collapsed run: company has 3 nodes, department has 3 nodes, section has 7", () => {
-  assert.equal(projectedBoundarySequence("company").length, 3);
-  assert.equal(projectedBoundarySequence("department").length, 3);
-  assert.equal(projectedBoundarySequence("section").length, 7);
+test("zooming one step down expands a collapsed run: company has 1 node, department has 4 nodes, section has 5", () => {
+  assert.equal(projectedBoundarySequence("company").length, 1);
+  assert.equal(projectedBoundarySequence("department").length, 4);
+  assert.equal(projectedBoundarySequence("section").length, 5);
+});
+
+test("every sample is v0-linear and collapses to one node at company while expanding at department", () => {
+  for (const sample of sampleProcesses) {
+    const leaves = leafIdsUnder(sample.model, sample.rootActivityId);
+    const scoped = scopedProcessModel(sample.model, leaves);
+
+    for (const boundary of HIERARCHICAL_BOUNDARY_ORDER) {
+      const view: ViewDef = {
+        id: "current",
+        layout: "lane",
+        boundary,
+        normalForm: "responsibilityBoundary",
+      };
+      const projected = projectByResponsibilityBoundary(scoped, view);
+      assert.equal(
+        projected.activities.length <= leaves.length,
+        true,
+        `${sample.id}: level ${boundary} produced more projected nodes than leaves`,
+      );
+      assert.equal(
+        isResponsibilityBoundaryNormalForm(projected),
+        true,
+        `${sample.id}: RBNF broken at level ${boundary}`,
+      );
+    }
+
+    const companyView: ViewDef = {
+      id: "current",
+      layout: "lane",
+      boundary: "company",
+      normalForm: "responsibilityBoundary",
+    };
+    const departmentView: ViewDef = {
+      id: "current",
+      layout: "lane",
+      boundary: "department",
+      normalForm: "responsibilityBoundary",
+    };
+    assert.equal(
+      projectByResponsibilityBoundary(scoped, companyView).activities.length,
+      1,
+      `${sample.id}: company should collapse to a single node`,
+    );
+    assert.ok(
+      projectByResponsibilityBoundary(scoped, departmentView).activities.length > 1,
+      `${sample.id}: department should expand to multiple nodes`,
+    );
+  }
 });
 
 test("display-axis boundaries are not affected by the zoom level helpers", () => {
