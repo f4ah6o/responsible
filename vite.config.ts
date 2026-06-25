@@ -11,6 +11,10 @@ export default defineConfig({
   build: {
     target: "es2022",
   },
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "react",
+  },
   lint: {
     ignorePatterns: ["dist/**"],
   },

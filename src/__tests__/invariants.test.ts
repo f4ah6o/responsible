@@ -141,11 +141,43 @@ test("RBNF: a valid projection has no adjacent same-boundary steps", () => {
   assert.equal(isResponsibilityBoundaryNormalForm(view), true);
 });
 
-test("core package declares zero runtime dependencies", () => {
-  const pkgPath = fileURLToPath(new URL("../../package.json", import.meta.url));
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as Record<string, unknown>;
+test("pure projection core modules import only relative modules (dependency-free core)", () => {
+  const coreModules = [
+    "model.ts",
+    "boundary.ts",
+    "hierarchy.ts",
+    "normalize.ts",
+    "semantic.ts",
+    "graph.ts",
+    "index.ts",
+  ];
+  for (const file of coreModules) {
+    const url = new URL(`../../src/${file}`, import.meta.url);
+    const source = readFileSync(fileURLToPath(url), "utf8");
+    const specifiers = [
+      ...source.matchAll(/^\s*(?:import|export)\b[^;\n]*?\bfrom\s+["']([^"']+)["']/g),
+    ].map((match) => match[1] ?? "");
+    for (const specifier of specifiers) {
+      assert.equal(
+        specifier.startsWith("./") || specifier.startsWith("../"),
+        true,
+        `${file} imports non-relative dependency "${specifier}"`,
+      );
+    }
+  }
+});
 
-  assert.equal("dependencies" in pkg, false);
+test("reference viewer declares react / react-dom / @xyflow/react runtime dependencies", () => {
+  const pkgPath = fileURLToPath(new URL("../../package.json", import.meta.url));
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+
+  assert.ok(pkg.dependencies, "package.json must declare runtime dependencies for the viewer");
+  for (const name of ["react", "react-dom", "@xyflow/react"]) {
+    assert.equal(typeof pkg.dependencies?.[name], "string", `missing runtime dependency: ${name}`);
+  }
   assert.equal(typeof pkg.devDependencies, "object");
   assert.ok(pkg.devDependencies !== null);
 });
