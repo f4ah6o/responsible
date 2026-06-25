@@ -4,10 +4,31 @@ import type { ActivityDef, Id, ProjectedActivity } from "../model.js";
 export type InspectorProps = {
   activity: ProjectedActivity | undefined;
   activities: Readonly<Record<Id, ActivityDef>>;
-  boundaryKey: string;
+  boundaryLabel: string;
 };
 
 const LEVELS: readonly string[] = [...HIERARCHICAL_BOUNDARY_ORDER];
+
+const LEVEL_LABELS: Record<string, string> = {
+  company: "会社",
+  department: "部門",
+  section: "課・セクション",
+  team: "チーム",
+  person: "担当者",
+};
+
+const KIND_LABELS: Record<string, string> = {
+  atomic: "単体",
+  composite: "合成",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  discovered: "発見済み",
+  defined: "定義済み",
+  validated: "検証済み",
+  automatable: "自動化可能",
+  composite: "合成",
+};
 
 function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
   return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
@@ -24,12 +45,12 @@ function unique(ids: readonly Id[]): Id[] {
   return result;
 }
 
-export function Inspector({ activity, activities, boundaryKey }: InspectorProps) {
+export function Inspector({ activity, activities, boundaryLabel }: InspectorProps) {
   if (!activity) {
     return (
-      <aside className="inspector" aria-label="Activity inspector">
+      <aside className="inspector" aria-label="Activity 詳細">
         <div className="panel">
-          <p className="empty-note">Select an Activity node to inspect it.</p>
+          <p className="empty-note">Activity ノードを選択すると詳細を表示します。</p>
         </div>
       </aside>
     );
@@ -45,38 +66,40 @@ export function Inspector({ activity, activities, boundaryKey }: InspectorProps)
       : sources.map((source) => source.name ?? source.id).join(" + ");
   const status = activity.kind === "atomic" ? (sources[0]?.status ?? "discovered") : "composite";
   const childIds = unique(sources.flatMap((source) => [...(source.children ?? [])]));
+  const kindLabel = KIND_LABELS[activity.kind] ?? activity.kind;
+  const statusLabel = STATUS_LABELS[status] ?? status;
 
   return (
-    <aside className="inspector" aria-label="Activity inspector">
+    <aside className="inspector" aria-label="Activity 詳細">
       <div className="panel">
-        <p className="eyebrow">selected activity</p>
+        <p className="eyebrow">選択中の Activity</p>
         <h2>{title}</h2>
         <dl className="facts">
           <div>
-            <dt>Kind</dt>
-            <dd>{activity.kind}</dd>
+            <dt>種類</dt>
+            <dd>{kindLabel}</dd>
           </div>
           <div>
-            <dt>Input</dt>
+            <dt>入力</dt>
             <dd>{activity.input}</dd>
           </div>
           <div>
-            <dt>Output</dt>
+            <dt>出力</dt>
             <dd>{activity.output}</dd>
           </div>
           <div>
-            <dt>Status</dt>
-            <dd>{status}</dd>
+            <dt>状態</dt>
+            <dd>{statusLabel}</dd>
           </div>
           <div>
-            <dt>{boundaryKey}</dt>
+            <dt>{boundaryLabel}</dt>
             <dd>{activity.boundary}</dd>
           </div>
         </dl>
 
         {activity.kind === "composite" ? (
           <>
-            <h3>Composed activities</h3>
+            <h3>合成された Activity</h3>
             <ol className="activity-id-list">
               {sourceIds.map((id) => (
                 <li key={id}>{activities[id]?.name ?? id}</li>
@@ -85,13 +108,13 @@ export function Inspector({ activity, activities, boundaryKey }: InspectorProps)
           </>
         ) : null}
 
-        <h3>Responsibility</h3>
+        <h3>責任境界</h3>
         <table className="responsibility-table">
           <thead>
             <tr>
               <th>Activity</th>
               {LEVELS.map((level) => (
-                <th key={level}>{level}</th>
+                <th key={level}>{LEVEL_LABELS[level] ?? level}</th>
               ))}
             </tr>
           </thead>
@@ -107,7 +130,7 @@ export function Inspector({ activity, activities, boundaryKey }: InspectorProps)
           </tbody>
         </table>
 
-        <h3>Children</h3>
+        <h3>子 Activity</h3>
         <div className="child-list">
           {childIds.length > 0 ? (
             childIds.map((id) => (
@@ -116,7 +139,7 @@ export function Inspector({ activity, activities, boundaryKey }: InspectorProps)
               </span>
             ))
           ) : (
-            <span className="empty-note">No child Activity.</span>
+            <span className="empty-note">子 Activity はありません。</span>
           )}
         </div>
       </div>
