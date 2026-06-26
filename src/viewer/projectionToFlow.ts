@@ -41,9 +41,10 @@ export function projectionToFlow(
   activities: Readonly<Record<Id, ActivityDef>>,
   selectedLeafId: Id | undefined,
   zoomLevel: number,
+  measuredHeights?: ReadonlyMap<string, number>,
 ): ProjectionFlow {
   const hierarchy = buildLaneHierarchy(view, activities, zoomLevel);
-  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities);
+  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities, measuredHeights);
 
   const lanes: FlowLane[] = laneNodes.map((n, i) => ({
     id: n.id,

@@ -1,9 +1,13 @@
 import { HIERARCHICAL_BOUNDARY_ORDER, canZoomIn, canZoomOut } from "../index.js";
 
+export type HeightMode = "estimated" | "measured";
+
 export type BoundaryZoomControlProps = {
   level: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  heightMode: HeightMode;
+  onToggleHeightMode: () => void;
 };
 
 const BOUNDARY_LABELS: Record<string, string> = {
@@ -14,7 +18,7 @@ const BOUNDARY_LABELS: Record<string, string> = {
   person: "担当者",
 };
 
-export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoomControlProps) {
+export function BoundaryZoomControl({ level, onZoomIn, onZoomOut, heightMode, onToggleHeightMode }: BoundaryZoomControlProps) {
   const key = HIERARCHICAL_BOUNDARY_ORDER[level] ?? "—";
   const label = BOUNDARY_LABELS[key] ?? key;
   const ordinal = level + 1;
@@ -36,6 +40,13 @@ export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoom
       </div>
       <button className="primary-action" onClick={onZoomIn} disabled={!canIn}>
         詳しく見る
+      </button>
+      <button
+        className="secondary-action height-mode-toggle"
+        onClick={onToggleHeightMode}
+        title={heightMode === "estimated" ? "推定モード（クリックで計測モードへ）" : "計測モード（クリックで推定モードへ）"}
+      >
+        {heightMode === "estimated" ? "推定" : "計測"}
       </button>
     </section>
   );

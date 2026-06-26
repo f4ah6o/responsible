@@ -58,23 +58,30 @@ function activityTitle(
 function leafLaneHeight(
   activities: ProjectedActivity[],
   defs: Readonly<Record<Id, ActivityDef>>,
+  measuredHeights?: ReadonlyMap<string, number>,
 ): number {
   if (activities.length === 0) return LANE_HEADER_HEIGHT + MIN_LANE_HEIGHT;
-  const maxCard = Math.max(...activities.map((a) => estimateCardHeight(activityTitle(a, defs))));
+  const maxCard = Math.max(
+    ...activities.map((a) => measuredHeights?.get(a.id) ?? estimateCardHeight(activityTitle(a, defs))),
+  );
   return LANE_HEADER_HEIGHT + maxCard + LANE_PADDING_BOTTOM;
 }
 
 type Measure = { width: number; height: number };
 
-function measure(lane: HierarchicalLane, defs: Readonly<Record<Id, ActivityDef>>): Measure {
+function measure(
+  lane: HierarchicalLane,
+  defs: Readonly<Record<Id, ActivityDef>>,
+  measuredHeights?: ReadonlyMap<string, number>,
+): Measure {
   if (lane.children.length === 0) {
     return {
       width: LEFT_PAD + Math.max(1, lane.activities.length) * HORIZONTAL_STEP,
-      height: leafLaneHeight(lane.activities, defs),
+      height: leafLaneHeight(lane.activities, defs, measuredHeights),
     };
   }
 
-  const childMeasures = lane.children.map((c) => measure(c, defs));
+  const childMeasures = lane.children.map((c) => measure(c, defs, measuredHeights));
   const maxChildWidth = Math.max(...childMeasures.map((m) => m.width));
   const totalChildHeight = childMeasures.reduce((s, m) => s + m.height, 0);
   const gaps = (lane.children.length - 1) * LANE_PADDING_Y;
@@ -92,10 +99,11 @@ function placeLane(
   position: { x: number; y: number },
   parentId: string | undefined,
   defs: Readonly<Record<Id, ActivityDef>>,
+  measuredHeights: ReadonlyMap<string, number> | undefined,
   laneNodes: Node[],
   activityLayouts: Map<string, ActivityLayout>,
 ): Measure {
-  const m = measure(lane, defs);
+  const m = measure(lane, defs, measuredHeights);
 
   laneNodes.push({
     id: lane.id,
@@ -128,7 +136,7 @@ function placeLane(
     let childY = LANE_HEADER_HEIGHT + LANE_PADDING_Y;
     for (const child of lane.children) {
       const childPos = { x: LANE_PADDING_X, y: childY };
-      const cm = placeLane(child, childPos, lane.id, defs, laneNodes, activityLayouts);
+      const cm = placeLane(child, childPos, lane.id, defs, measuredHeights, laneNodes, activityLayouts);
       childY += cm.height + LANE_PADDING_Y;
     }
   }
@@ -139,6 +147,7 @@ function placeLane(
 export function layoutHierarchy(
   hierarchy: LaneHierarchy,
   activities: Readonly<Record<Id, ActivityDef>>,
+  measuredHeights?: ReadonlyMap<string, number>,
 ): HierarchyLayout {
   globalIndex = 0;
   const laneNodes: Node[] = [];
@@ -146,7 +155,7 @@ export function layoutHierarchy(
 
   let rootX = 0;
   for (const root of hierarchy.roots) {
-    const m = placeLane(root, { x: rootX, y: 0 }, undefined, activities, laneNodes, activityLayouts);
+    const m = placeLane(root, { x: rootX, y: 0 }, undefined, activities, measuredHeights, laneNodes, activityLayouts);
     rootX += m.width + LANE_PADDING_X;
   }
 
