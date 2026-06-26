@@ -24,8 +24,8 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) report(activity.id, entry.contentRect.height);
+    const observer = new ResizeObserver(() => {
+      report(activity.id, el.offsetHeight);
     });
     observer.observe(el);
     return () => observer.disconnect();
