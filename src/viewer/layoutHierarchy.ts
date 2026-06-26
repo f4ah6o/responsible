@@ -10,6 +10,10 @@ export type LaneNodeData = {
   isLeaf: boolean;
 };
 
+export type LaneSeparatorData = {
+  label: string;
+};
+
 export type ActivityLayout = {
   parentId: string;
   x: number;
@@ -23,6 +27,7 @@ export type HierarchyLayout = {
 };
 
 const LANE_HEADER_HEIGHT = 36;
+const LANE_SEPARATOR_HEIGHT = 28;
 const LANE_PADDING_Y = 4;
 const LANE_PADDING_BOTTOM = 12;
 const HORIZONTAL_STEP = 220;
@@ -73,14 +78,23 @@ function leafLaneHeight(
   return LANE_HEADER_HEIGHT + maxCard + LANE_PADDING_BOTTOM;
 }
 
-type LeafEntry = { lane: HierarchicalLane; pathLabel: string };
+type LeafEntry = {
+  lane: HierarchicalLane;
+  leafLabel: string;
+  prefixLabel: string;
+};
 
 function collectLeafs(lane: HierarchicalLane, ancestorLabels: string[]): LeafEntry[] {
-  const path = [...ancestorLabels, lane.label];
   if (lane.children.length === 0) {
-    return [{ lane, pathLabel: path.join(" › ") }];
+    return [{
+      lane,
+      leafLabel: lane.label,
+      prefixLabel: ancestorLabels.join(" › "),
+    }];
   }
-  return lane.children.flatMap((child) => collectLeafs(child, path));
+  return lane.children.flatMap((child) =>
+    collectLeafs(child, [...ancestorLabels, lane.label]),
+  );
 }
 
 export function layoutHierarchy(
@@ -94,12 +108,29 @@ export function layoutHierarchy(
   const totalActivities = hierarchy.activityFlowIndex.size;
   const canvasWidth = LEFT_PAD + Math.max(1, totalActivities) * HORIZONTAL_STEP + RIGHT_PAD;
 
-  // Collect all leaf lanes in DFS order, each with its full breadcrumb path
   const leafEntries = hierarchy.roots.flatMap((root) => collectLeafs(root, []));
 
   let y = 0;
-  let index = 0;
-  for (const { lane, pathLabel } of leafEntries) {
+  let laneIndex = 0;
+  let prevPrefix = "\0"; // sentinel
+
+  for (const { lane, leafLabel, prefixLabel } of leafEntries) {
+    // Insert separator when parent path changes (skip when prefix is empty = single-level)
+    if (prefixLabel !== prevPrefix && prefixLabel !== "") {
+      laneNodes.push({
+        id: `sep:${prefixLabel}`,
+        type: "laneSeparator",
+        position: { x: 0, y },
+        data: { label: prefixLabel } satisfies LaneSeparatorData,
+        style: { width: canvasWidth, height: LANE_SEPARATOR_HEIGHT },
+        className: "lane-separator-node",
+        draggable: false,
+        selectable: false,
+      });
+      y += LANE_SEPARATOR_HEIGHT + LANE_PADDING_Y;
+      prevPrefix = prefixLabel;
+    }
+
     const height = leafLaneHeight(lane.activities, activities, measuredHeights);
 
     laneNodes.push({
@@ -107,8 +138,8 @@ export function layoutHierarchy(
       type: "laneGroup",
       position: { x: 0, y },
       data: {
-        label: pathLabel,
-        index: index++,
+        label: leafLabel,
+        index: laneIndex++,
         depth: 0,
         boundaryKey: lane.boundaryKey,
         isLeaf: true,
