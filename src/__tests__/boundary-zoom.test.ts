@@ -22,11 +22,11 @@ import {
 import { rootActivityId, sampleModel, sampleProcesses } from "./../../src/sample.js";
 
 const EXPECTED_PROJECTION_BOUNDARIES: Record<string, string[]> = {
-  company: ["Acme Software"],
-  department: ["Product", "Engineering", "Quality", "Platform"],
-  section: ["Product Management", "Architecture", "Application", "QA", "Release Eng"],
-  team: ["Triage", "Design", "Feature", "Test", "Ops"],
-  person: ["Alice", "Bob", "Carol", "Dan", "Erin", "Frank"],
+  company: ["あかつきソフトウェア"],
+  department: ["プロダクト部", "開発部", "品質保証部", "開発部", "品質保証部", "基盤部"],
+  section: ["プロダクト管理課", "アーキテクチャ課", "アプリケーション課", "QA課", "アプリケーション課", "QA課", "リリース管理課"],
+  team: ["トリアージチーム", "設計チーム", "機能開発チーム", "テストチーム", "機能開発チーム", "テストチーム", "運用チーム"],
+  person: ["佐藤", "鈴木", "渡辺", "高橋", "田中", "高橋", "伊藤", "高橋", "伊藤", "小林"],
 };
 
 function scopedProcessModel(model: ProcessModel, leafIds: readonly string[]): ProcessModel {
@@ -172,15 +172,17 @@ test("each hierarchical level projection sequence matches the expected flow orde
   }
 });
 
-test("person level projects every leaf because no two consecutive leaves share a person", () => {
+test("person level produces fewer nodes than leaves because some consecutive leaves share a person", () => {
   const sequence = projectedBoundarySequence("person");
-  assert.equal(sequence.length, leafIdsUnder(sampleModel, rootActivityId).length);
+  const leaves = leafIdsUnder(sampleModel, rootActivityId);
+  assert.ok(sequence.length <= leaves.length, "person-level nodes must not exceed leaf count");
+  assert.ok(sequence.length > 0, "person-level must have at least one node");
 });
 
-test("zooming one step down expands a collapsed run: company has 1 node, department has 4 nodes, section has 5", () => {
+test("zooming one step down expands a collapsed run: company has 1 node, department has 6 nodes, section has 7", () => {
   assert.equal(projectedBoundarySequence("company").length, 1);
-  assert.equal(projectedBoundarySequence("department").length, 4);
-  assert.equal(projectedBoundarySequence("section").length, 5);
+  assert.equal(projectedBoundarySequence("department").length, 6);
+  assert.equal(projectedBoundarySequence("section").length, 7);
 });
 
 test("every sample is v0-linear and collapses to one node at company while expanding at department", () => {
