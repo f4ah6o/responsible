@@ -1,5 +1,4 @@
 import { HIERARCHICAL_BOUNDARY_ORDER } from "../index.js";
-import { resolveBoundaryValue, formatBoundaryValue } from "../boundary.js";
 import type { ActivityDef, Id, ProcessView, ProjectedActivity } from "../model.js";
 
 export type HierarchicalLane = {
@@ -14,44 +13,50 @@ export type HierarchicalLane = {
 export type LaneHierarchy = {
   roots: HierarchicalLane[];
   activityParentId: Map<Id, string>;
+  activityFlowIndex: Map<Id, number>;
 };
 
-function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
-  return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
+/**
+ * Parse a composite boundary string like "company:X|department:Y|team:Z"
+ * into an array of values ["X", "Y", "Z"].
+ * For a single-key boundary like "team_name", returns ["team_name"].
+ */
+function parseBoundaryPath(boundaryStr: string): string[] {
+  if (!boundaryStr.includes("|")) return [boundaryStr];
+  return boundaryStr.split("|").map((part) => {
+    const idx = part.indexOf(":");
+    return idx >= 0 ? part.slice(idx + 1) : part;
+  });
 }
 
 export function buildLaneHierarchy(
   view: ProcessView,
-  activities: Readonly<Record<Id, ActivityDef>>,
+  _activities: Readonly<Record<Id, ActivityDef>>,
   zoomLevel: number,
 ): LaneHierarchy {
-  const leafKey = HIERARCHICAL_BOUNDARY_ORDER[zoomLevel] ?? HIERARCHICAL_BOUNDARY_ORDER[0]!;
-  const ancestorKeys = HIERARCHICAL_BOUNDARY_ORDER.slice(0, zoomLevel);
+  const pathKeys = HIERARCHICAL_BOUNDARY_ORDER.slice(0, zoomLevel + 1);
 
   const roots: HierarchicalLane[] = [];
   const laneById = new Map<string, HierarchicalLane>();
   const activityParentId = new Map<Id, string>();
+  const activityFlowIndex = new Map<Id, number>();
 
-  for (const activity of view.activities) {
-    const sourceId = sourceIdsOf(activity)[0];
-    if (!sourceId) continue;
-    const sourceDef = activities[sourceId];
-    if (!sourceDef) continue;
+  for (const [flowIndex, activity] of view.activities.entries()) {
+    activityFlowIndex.set(activity.id, flowIndex);
 
-    const pathKeys = [...ancestorKeys, leafKey];
-    const pathValues = pathKeys.map((key) =>
-      formatBoundaryValue(resolveBoundaryValue(sourceDef, key)),
-    );
+    const pathValues = parseBoundaryPath(activity.boundary);
 
     let currentChildren = roots;
-    let parentLane: HierarchicalLane | undefined;
 
     for (let depth = 0; depth < pathKeys.length; depth++) {
       const key = pathKeys[depth]!;
-      const value = pathValues[depth]!;
+      const value = pathValues[depth] ?? "<unassigned>";
 
       const segments = pathValues.slice(0, depth + 1);
-      const laneId = `lane:${pathKeys.slice(0, depth + 1).map((k, i) => `${k}:${segments[i]}`).join("/")}`;
+      const laneId = `lane:${pathKeys
+        .slice(0, depth + 1)
+        .map((k, i) => `${k}:${segments[i]}`)
+        .join("/")}`;
 
       let lane = laneById.get(laneId);
       if (!lane) {
@@ -73,11 +78,8 @@ export function buildLaneHierarchy(
       }
 
       currentChildren = lane.children;
-      parentLane = lane;
     }
-
-    void parentLane;
   }
 
-  return { roots, activityParentId };
+  return { roots, activityParentId, activityFlowIndex };
 }

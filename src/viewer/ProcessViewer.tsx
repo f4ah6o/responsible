@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
-  boundaryForLevel,
+  HIERARCHICAL_BOUNDARY_ORDER,
   canZoomIn,
   canZoomOut,
   projectByResponsibilityBoundary,
@@ -72,7 +72,8 @@ export function ProcessViewer() {
   const model = sample.model;
   const rootId = sample.rootActivityId;
 
-  const boundary: BoundaryExpr = boundaryForLevel(zoomLevel);
+  // Project by full path up to zoom level so composites never cross ancestor boundaries
+  const boundary: BoundaryExpr = HIERARCHICAL_BOUNDARY_ORDER.slice(0, zoomLevel + 1);
 
   const projected = useMemo(() => {
     const scoped = scopedProcessModel(model, leafIdsUnder(model, rootId));

@@ -23,20 +23,19 @@ export type HierarchyLayout = {
 };
 
 const LANE_HEADER_HEIGHT = 32;
-const LANE_PADDING_X = 16;
 const LANE_PADDING_Y = 8;
 const LANE_PADDING_BOTTOM = 12;
 const HORIZONTAL_STEP = 220;
-const MIN_LANE_HEIGHT = 120;
 const LEFT_PAD = 16;
+const RIGHT_PAD = 48;
 
-// Activity card height estimation
-const CARD_PADDING_V = 20; // top + bottom padding
-const CARD_GAP_TOTAL = 12; // 3 gaps × 4px
-const CARD_FIXED_LINES_HEIGHT = 54; // subtitle + type + boundary pill (~18+18+22 + gaps)
-const TITLE_AVAILABLE_WIDTH = 120; // card inner width minus kind badge
-const TITLE_CHAR_WIDTH = 13; // average px per Japanese/mixed char
-const TITLE_LINE_HEIGHT = 21; // px per line at 0.92rem bold
+// Card height estimation
+const CARD_PADDING_V = 20;
+const CARD_GAP_TOTAL = 12;
+const CARD_FIXED_LINES_HEIGHT = 54;
+const TITLE_AVAILABLE_WIDTH = 120;
+const TITLE_CHAR_WIDTH = 13;
+const TITLE_LINE_HEIGHT = 21;
 
 function estimateTitleLines(title: string): number {
   const charsPerLine = Math.max(1, Math.floor(TITLE_AVAILABLE_WIDTH / TITLE_CHAR_WIDTH));
@@ -44,7 +43,12 @@ function estimateTitleLines(title: string): number {
 }
 
 function estimateCardHeight(title: string): number {
-  return CARD_PADDING_V + CARD_GAP_TOTAL + CARD_FIXED_LINES_HEIGHT + estimateTitleLines(title) * TITLE_LINE_HEIGHT;
+  return (
+    CARD_PADDING_V +
+    CARD_GAP_TOTAL +
+    CARD_FIXED_LINES_HEIGHT +
+    estimateTitleLines(title) * TITLE_LINE_HEIGHT
+  );
 }
 
 function activityTitle(
@@ -60,34 +64,34 @@ function leafLaneHeight(
   defs: Readonly<Record<Id, ActivityDef>>,
   measuredHeights?: ReadonlyMap<string, number>,
 ): number {
-  if (activities.length === 0) return LANE_HEADER_HEIGHT + MIN_LANE_HEIGHT;
+  if (activities.length === 0) return LANE_HEADER_HEIGHT + 120;
   const maxCard = Math.max(
-    ...activities.map((a) => measuredHeights?.get(a.id) ?? estimateCardHeight(activityTitle(a, defs))),
+    ...activities.map(
+      (a) => measuredHeights?.get(a.id) ?? estimateCardHeight(activityTitle(a, defs)),
+    ),
   );
   return LANE_HEADER_HEIGHT + maxCard + LANE_PADDING_BOTTOM;
 }
 
-type Measure = { width: number; height: number };
+// Swim-lane layout: all lanes are x=0, stacked vertically, sharing the same full canvas width.
+// This preserves global flow order on the x axis across all leaf lanes.
 
-function measure(
+type LaneMeasure = { height: number };
+
+function measureLane(
   lane: HierarchicalLane,
   defs: Readonly<Record<Id, ActivityDef>>,
-  measuredHeights?: ReadonlyMap<string, number>,
-): Measure {
+  measuredHeights: ReadonlyMap<string, number> | undefined,
+): LaneMeasure {
   if (lane.children.length === 0) {
-    return {
-      width: LEFT_PAD + Math.max(1, lane.activities.length) * HORIZONTAL_STEP,
-      height: leafLaneHeight(lane.activities, defs, measuredHeights),
-    };
+    return { height: leafLaneHeight(lane.activities, defs, measuredHeights) };
   }
 
-  const childMeasures = lane.children.map((c) => measure(c, defs, measuredHeights));
-  const maxChildWidth = Math.max(...childMeasures.map((m) => m.width));
-  const totalChildHeight = childMeasures.reduce((s, m) => s + m.height, 0);
+  const childHeights = lane.children.map((c) => measureLane(c, defs, measuredHeights).height);
+  const totalChildHeight = childHeights.reduce((s, h) => s + h, 0);
   const gaps = (lane.children.length - 1) * LANE_PADDING_Y;
 
   return {
-    width: LANE_PADDING_X * 2 + maxChildWidth,
     height: LANE_HEADER_HEIGHT + LANE_PADDING_Y + totalChildHeight + gaps + LANE_PADDING_BOTTOM,
   };
 }
@@ -96,19 +100,21 @@ let globalIndex = 0;
 
 function placeLane(
   lane: HierarchicalLane,
-  position: { x: number; y: number },
+  relativeY: number,
   parentId: string | undefined,
+  canvasWidth: number,
   defs: Readonly<Record<Id, ActivityDef>>,
   measuredHeights: ReadonlyMap<string, number> | undefined,
+  activityFlowIndex: ReadonlyMap<string, number>,
   laneNodes: Node[],
   activityLayouts: Map<string, ActivityLayout>,
-): Measure {
-  const m = measure(lane, defs, measuredHeights);
+): LaneMeasure {
+  const m = measureLane(lane, defs, measuredHeights);
 
   laneNodes.push({
     id: lane.id,
     type: "laneGroup",
-    position,
+    position: { x: 0, y: relativeY },
     data: {
       label: lane.label,
       index: globalIndex++,
@@ -116,7 +122,7 @@ function placeLane(
       boundaryKey: lane.boundaryKey,
       isLeaf: lane.children.length === 0,
     } satisfies LaneNodeData,
-    style: { width: m.width, height: m.height },
+    style: { width: canvasWidth, height: m.height },
     className: "lane-node",
     draggable: false,
     selectable: false,
@@ -124,10 +130,12 @@ function placeLane(
   });
 
   if (lane.children.length === 0) {
+    // Leaf lane: position each activity by global flowIndex so x-axis = flow order
     lane.activities.forEach((activity, localIndex) => {
+      const fi = activityFlowIndex.get(activity.id) ?? localIndex;
       activityLayouts.set(activity.id, {
         parentId: lane.id,
-        x: LEFT_PAD + localIndex * HORIZONTAL_STEP,
+        x: LEFT_PAD + fi * HORIZONTAL_STEP,
         y: LANE_HEADER_HEIGHT,
         localIndex,
       });
@@ -135,8 +143,17 @@ function placeLane(
   } else {
     let childY = LANE_HEADER_HEIGHT + LANE_PADDING_Y;
     for (const child of lane.children) {
-      const childPos = { x: LANE_PADDING_X, y: childY };
-      const cm = placeLane(child, childPos, lane.id, defs, measuredHeights, laneNodes, activityLayouts);
+      const cm = placeLane(
+        child,
+        childY,
+        lane.id,
+        canvasWidth,
+        defs,
+        measuredHeights,
+        activityFlowIndex,
+        laneNodes,
+        activityLayouts,
+      );
       childY += cm.height + LANE_PADDING_Y;
     }
   }
@@ -153,10 +170,24 @@ export function layoutHierarchy(
   const laneNodes: Node[] = [];
   const activityLayouts = new Map<string, ActivityLayout>();
 
-  let rootX = 0;
+  const totalActivities = hierarchy.activityFlowIndex.size;
+  const canvasWidth = LEFT_PAD + Math.max(1, totalActivities) * HORIZONTAL_STEP + RIGHT_PAD;
+
+  // Root lanes stacked vertically at x=0
+  let rootY = 0;
   for (const root of hierarchy.roots) {
-    const m = placeLane(root, { x: rootX, y: 0 }, undefined, activities, measuredHeights, laneNodes, activityLayouts);
-    rootX += m.width + LANE_PADDING_X;
+    const m = placeLane(
+      root,
+      rootY,
+      undefined,
+      canvasWidth,
+      activities,
+      measuredHeights,
+      hierarchy.activityFlowIndex,
+      laneNodes,
+      activityLayouts,
+    );
+    rootY += m.height + LANE_PADDING_Y;
   }
 
   return { laneNodes, activityLayouts };

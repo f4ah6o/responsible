@@ -31,6 +31,14 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
     return () => observer.disconnect();
   }, [activity.id, report]);
 
+  // boundary may be a full path "company:X|department:Y|team:Z" — show only leaf value
+  const boundaryLabel = (() => {
+    const parts = activity.boundary.split("|");
+    const last = parts[parts.length - 1] ?? activity.boundary;
+    const idx = last.indexOf(":");
+    return idx >= 0 ? last.slice(idx + 1) : last;
+  })();
+
   return (
     <div
       ref={ref}
@@ -45,7 +53,7 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
       <div className="activity-type">
         {activity.input} → {activity.output}
       </div>
-      <div className="activity-boundary">{activity.boundary}</div>
+      <div className="activity-boundary">{boundaryLabel}</div>
     </div>
   );
 }
