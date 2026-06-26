@@ -11,12 +11,7 @@ const KIND_LABELS: Record<string, string> = {
 
 export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
   const { activity, names } = data;
-  const title =
-    activity.kind === "atomic"
-      ? (names[0] ?? activity.id)
-      : names.length <= 2
-        ? names.join(" + ")
-        : `${names[0]} → ${names[names.length - 1]}`;
+  const title = activity.kind === "atomic" ? (names[0] ?? activity.id) : names.join(" + ");
   const subtitle =
     activity.kind === "composite" ? `${names.length} 件の Activity を合成` : activity.id;
   const kindLabel = KIND_LABELS[activity.kind] ?? activity.kind;

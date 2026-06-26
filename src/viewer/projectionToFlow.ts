@@ -43,7 +43,7 @@ export function projectionToFlow(
   zoomLevel: number,
 ): ProjectionFlow {
   const hierarchy = buildLaneHierarchy(view, activities, zoomLevel);
-  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy);
+  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities);
 
   const lanes: FlowLane[] = laneNodes.map((n, i) => ({
     id: n.id,
