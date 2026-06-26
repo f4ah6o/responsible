@@ -41,13 +41,20 @@ export function BoundaryZoomControl({ level, onZoomIn, onZoomOut, heightMode, on
       <button className="primary-action" onClick={onZoomIn} disabled={!canIn}>
         詳しく見る
       </button>
-      <button
-        className="secondary-action height-mode-toggle"
-        onClick={onToggleHeightMode}
-        title={heightMode === "estimated" ? "推定モード（クリックで計測モードへ）" : "計測モード（クリックで推定モードへ）"}
-      >
-        {heightMode === "estimated" ? "推定" : "計測"}
-      </button>
+      <div className="height-mode-toggle" aria-label="高さ計算モード">
+        <button
+          className={heightMode === "estimated" ? "toggle-active" : "toggle-inactive"}
+          onClick={heightMode !== "estimated" ? onToggleHeightMode : undefined}
+        >
+          推定
+        </button>
+        <button
+          className={heightMode === "measured" ? "toggle-active" : "toggle-inactive"}
+          onClick={heightMode !== "measured" ? onToggleHeightMode : undefined}
+        >
+          計測
+        </button>
+      </div>
     </section>
   );
 }

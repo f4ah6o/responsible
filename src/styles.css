@@ -67,6 +67,34 @@ button {
   padding: 6px 10px;
 }
 
+.height-mode-toggle {
+  display: flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.height-mode-toggle .toggle-active {
+  background: #111827;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: default;
+}
+.height-mode-toggle .toggle-inactive {
+  background: #fff;
+  color: #64748b;
+  border: none;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.height-mode-toggle .toggle-inactive:hover {
+  background: #f1f5f9;
+}
+
 .zoom-bar {
   display: flex;
   flex-shrink: 0;
