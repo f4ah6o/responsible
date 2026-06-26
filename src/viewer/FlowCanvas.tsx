@@ -11,27 +11,21 @@ import {
 } from "@xyflow/react";
 
 import { ActivityNode } from "./ActivityNode";
-import type { LaneNodeData, LaneSeparatorData } from "./layoutHierarchy";
+import type { LaneNodeData } from "./layoutHierarchy";
 
 type LaneNodeType = Node<LaneNodeData, "laneGroup">;
-type LaneSeparatorType = Node<LaneSeparatorData, "laneSeparator">;
 
 function LaneGroup({ data }: NodeProps<LaneNodeType>) {
   return (
-    <div className="lane-group">
+    <div className="lane-group" data-depth={data.depth}>
       <span className="lane-label">{data.label}</span>
     </div>
   );
 }
 
-function LaneSeparator({ data }: NodeProps<LaneSeparatorType>) {
-  return <div className="lane-separator">{data.label}</div>;
-}
-
 const nodeTypes = {
   activity: ActivityNode,
   laneGroup: LaneGroup,
-  laneSeparator: LaneSeparator,
 } satisfies NodeTypes;
 
 export type FlowCanvasProps = {
