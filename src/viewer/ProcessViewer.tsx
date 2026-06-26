@@ -81,8 +81,8 @@ export function ProcessViewer() {
   }, [model, rootId, boundary]);
 
   const flow = useMemo(
-    () => projectionToFlow(projected, model.activities, selectedLeafId),
-    [projected, model, selectedLeafId],
+    () => projectionToFlow(projected, model.activities, selectedLeafId, zoomLevel),
+    [projected, model, selectedLeafId, zoomLevel],
   );
 
   const handleNodeClick = useCallback(

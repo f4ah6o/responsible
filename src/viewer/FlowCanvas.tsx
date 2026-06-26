@@ -11,13 +11,13 @@ import {
 } from "@xyflow/react";
 
 import { ActivityNode } from "./ActivityNode";
-import type { LaneNodeData } from "./projectionToFlow";
+import type { LaneNodeData } from "./layoutHierarchy";
 
 type LaneNodeType = Node<LaneNodeData, "laneGroup">;
 
 function LaneGroup({ data }: NodeProps<LaneNodeType>) {
   return (
-    <div className="lane-group">
+    <div className="lane-group" data-depth={data.depth}>
       <span className="lane-label">{data.label}</span>
     </div>
   );
