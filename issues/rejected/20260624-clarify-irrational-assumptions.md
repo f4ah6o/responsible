@@ -1,9 +1,9 @@
 # Clarify and correct irrational assumptions in docs and reference implementation
 
-Status: open
-Model: unknown
+Status: rejected
+Model: GPT-5
 Created: 2026-06-24
-Updated: 2026-06-24
+Updated: 2026-06-27
 Branch: docs/20260624-clarify-irrational-assumptions
 Source:
 
@@ -113,3 +113,4 @@ README / docs / reference implementation / sample data の間で、以下を整�
   - GitHub updatedAt: 2026-06-24T23:27:32Z
 - GitHub close comment:
   - Captured as local issue. issues/open/20260624-clarify-irrational-assumptions.md
+- 2026-06-27: Superseded and split across the dependency-policy, README design-principles, boundary-zoom, and process-viewer issues; keeping the more focused issues as the actionable records.

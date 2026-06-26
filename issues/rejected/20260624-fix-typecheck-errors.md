@@ -1,9 +1,9 @@
 # 既存の型チェックエラーを解消する
 
-Status: open
-Model: claude-opus-4-8
+Status: rejected
+Model: GPT-5
 Created: 2026-06-24
-Updated: 2026-06-24
+Updated: 2026-06-27
 Branch: fix/20260624-fix-typecheck-errors
 
 ## 概要
@@ -66,3 +66,4 @@ Branch: fix/20260624-fix-typecheck-errors
 
 - レビュー時の再現コマンド: `git stash push -- src/ package.json && npm run typecheck && git stash pop`。
 - 整形の混入とは独立した問題のため、別イシュー（フォーマッタ設定）とは別ブランチで対応する。
+- 2026-06-27: Superseded by issues/polished/20260624-align-reference-impl-semantic-core.md; the typecheck fixes are implemented and pnpm run typecheck passes.

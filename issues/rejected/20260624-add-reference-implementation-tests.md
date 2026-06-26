@@ -1,5 +1,11 @@
 # Add tests for the reference implementation core
 
+Status: rejected
+Model: GPT-5
+Created: 2026-06-24
+Updated: 2026-06-27
+Branch: test/20260624-add-reference-implementation-tests
+
 ## 概要
 
 Add automated tests for the existing TypeScript reference implementation so that the semantic core (`model`, `boundary`, `normalize`) can be changed and reviewed safely.
@@ -79,7 +85,7 @@ Provide a minimal, fast, dependency-free test suite that exercises the public AP
 - `CHANGES.md` への影響: yes
 - 項目案: Add automated tests for the v0 reference implementation core covering boundary resolution and Responsibility Boundary Normal Form projection.
 
----
+## 注記
 
-- Branch: `test/20260624-add-reference-implementation-tests`
-- Model: `opencode-go/kimi-k2.7-code`
+- Original model: `opencode-go/kimi-k2.7-code`
+- 2026-06-27: Superseded by the existing `node:test` suite and `issues/polished/20260624-align-reference-impl-semantic-core.md`; the remaining `pnpm test` failure is a sample expectation mismatch, not missing test infrastructure.

@@ -1,9 +1,9 @@
 # Reference implementation のズームを責任境界レベルによる詳細度制御に修正する
 
-Status: open
-Model: unknown
+Status: rejected
+Model: GPT-5
 Created: 2026-06-25
-Updated: 2026-06-25
+Updated: 2026-06-27
 Branch: main
 Source:
 
@@ -83,6 +83,8 @@ README で定義している `Zoom = choose boundary` の概念に合わせ、re
 
 ## 注記
 
+- 2026-06-27: Duplicate of `issues/polished/20260625-fix-boundary-zoom.md`, which carries the polished implementation-ready scope and acceptance criteria.
+- Original model: `opencode-go/glm-5.2`
 - GitHub Issue labels: none
 - GitHub Issue createdAt: 2026-06-24T03:38:35Z
 - GitHub Issue updatedAt: 2026-06-24T15:27:52Z
