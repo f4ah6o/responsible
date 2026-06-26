@@ -143,20 +143,27 @@ export function ProcessViewer() {
   return (
     <HeightReportContext.Provider value={heightMode === "measured" ? handleHeightMeasured : noop}>
       <main className="shell">
-        <FlowCanvas nodes={flow.nodes} edges={flow.edges} onNodeClick={handleNodeClick}>
-          <ProcessSelect
-            processes={sampleProcesses}
-            value={sample.id}
-            onChange={handleProcessChange}
-          />
-          <BoundaryZoomControl
-            level={zoomLevel}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            heightMode={heightMode}
-            onToggleHeightMode={handleToggleHeightMode}
-          />
-        </FlowCanvas>
+        <FlowCanvas
+          nodes={flow.nodes}
+          edges={flow.edges}
+          onNodeClick={handleNodeClick}
+          toolbar={
+            <>
+              <ProcessSelect
+                processes={sampleProcesses}
+                value={sample.id}
+                onChange={handleProcessChange}
+              />
+              <BoundaryZoomControl
+                level={zoomLevel}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                heightMode={heightMode}
+                onToggleHeightMode={handleToggleHeightMode}
+              />
+            </>
+          }
+        />
       </main>
     </HeightReportContext.Provider>
   );
