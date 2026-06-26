@@ -27,8 +27,8 @@ export type ProjectionFlow = {
 
 const HORIZONTAL_STEP = 220;
 const NODE_WIDTH = 180;
-const LANE_STEP = 140;
-const LANE_HEIGHT = 128;
+const LANE_STEP = 220;
+const LANE_HEIGHT = 200;
 const NODE_Y = 34;
 const LEFT_PAD = 16;
 const RIGHT_PAD = 48;
