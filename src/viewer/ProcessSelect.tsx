@@ -8,7 +8,7 @@ export type ProcessSelectProps = {
 
 export function ProcessSelect({ processes, value, onChange }: ProcessSelectProps) {
   return (
-    <label className="process-picker overlay-top-left">
+    <label className="process-picker">
       <span>プロセス</span>
       <select value={value} onChange={(event) => onChange(event.currentTarget.value)}>
         {processes.map((process) => (
