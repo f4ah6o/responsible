@@ -31,7 +31,6 @@ button {
   overflow: hidden;
 }
 
-
 .process-picker {
   display: flex;
   flex-shrink: 0;
@@ -46,6 +45,64 @@ button {
   border-radius: 999px;
   background: #fff;
   padding: 6px 10px;
+}
+
+.scope-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.scope-breadcrumb {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 48vw;
+  overflow: hidden;
+}
+.scope-breadcrumb button {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: #475569;
+  padding: 4px 6px;
+  font-weight: 800;
+}
+.scope-breadcrumb button + button::before {
+  content: "/";
+  margin-right: 8px;
+  color: #94a3b8;
+}
+.scope-breadcrumb .scope-ancestor {
+  color: #2563eb;
+  cursor: pointer;
+}
+.scope-breadcrumb .scope-current {
+  color: #111827;
+  cursor: default;
+}
+.scope-control select {
+  flex-shrink: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  padding: 6px 10px;
+}
+.scope-control select:disabled {
+  opacity: 0.55;
+}
+.scope-error {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b91c1c;
 }
 
 .height-mode-toggle {
@@ -175,35 +232,47 @@ button {
   border: 2px solid #334155;
   background: rgba(241, 245, 249, 0.6);
 }
-.lane-group[data-depth="0"] > .lane-label { background: #334155; }
+.lane-group[data-depth="0"] > .lane-label {
+  background: #334155;
+}
 
 /* depth=1 department */
 .lane-group[data-depth="1"] {
   border: 1.5px dashed #64748b;
   background: rgba(248, 250, 252, 0.5);
 }
-.lane-group[data-depth="1"] > .lane-label { background: #64748b; }
+.lane-group[data-depth="1"] > .lane-label {
+  background: #64748b;
+}
 
 /* depth=2 section */
 .lane-group[data-depth="2"] {
   border: 1px dashed #94a3b8;
   background: rgba(255, 255, 255, 0.4);
 }
-.lane-group[data-depth="2"] > .lane-label { background: #94a3b8; }
+.lane-group[data-depth="2"] > .lane-label {
+  background: #94a3b8;
+}
 
 /* depth=3 team */
 .lane-group[data-depth="3"] {
   border: 1px dotted #cbd5e1;
   background: rgba(255, 255, 255, 0.3);
 }
-.lane-group[data-depth="3"] > .lane-label { background: #cbd5e1; color: #334155; }
+.lane-group[data-depth="3"] > .lane-label {
+  background: #cbd5e1;
+  color: #334155;
+}
 
 /* depth=4 person */
 .lane-group[data-depth="4"] {
   border: 1px dotted #e2e8f0;
   background: rgba(255, 255, 255, 0.2);
 }
-.lane-group[data-depth="4"] > .lane-label { background: #e2e8f0; color: #334155; }
+.lane-group[data-depth="4"] > .lane-label {
+  background: #e2e8f0;
+  color: #334155;
+}
 .react-flow__node.activity-node {
   padding: 0;
   border: 0;

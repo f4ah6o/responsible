@@ -1,9 +1,9 @@
 # Viewer に Activity 分解の drill-down / drill-out を実装する
 
-Status: polished
-Model: claude-fable-5
+Status: done
+Model: GPT-5
 Created: 2026-07-02
-Updated: 2026-07-02
+Updated: 2026-07-03
 Branch: feat/20260702-add-viewer-drill-down
 
 ## 概要
@@ -87,3 +87,5 @@ reference viewer に、Activity 分解階層（`children`）に沿った drill-d
 - 現行 viewer に Inspector が存在しない点は文書側の乖離であり、本イシューの文書更新で解消する。
 - 将来、射影ノードから所属サブスコープへ移動するショートカット（例: ノードのダブルクリックで、その leaf を含む直下のサブスコープへ drill-down）を追加できるが、本イシューではスコープ選択コントロールのみを必須とする。
 - 2026-07-02: polish-issue: 品質基準を満たしたため polished へ遷移
+- 2026-07-03: Started implementation from the polished backlog.
+- 2026-07-03: Implemented and verified with formatter/check/typecheck/test/build workflow.

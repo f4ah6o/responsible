@@ -4,6 +4,7 @@ import {
   HIERARCHICAL_BOUNDARY_ORDER,
   canZoomIn,
   canZoomOut,
+  leafActivityIds,
   projectByResponsibilityBoundary,
 } from "../index.js";
 import type {
@@ -29,16 +30,6 @@ function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
   return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
 }
 
-function leafIdsUnder(model: ProcessModel, id: Id, seen = new Set<Id>()): Id[] {
-  if (seen.has(id)) return [];
-  seen.add(id);
-  const activity = model.activities[id];
-  if (!activity) return [];
-  const children = activity.children ?? [];
-  if (children.length === 0) return [id];
-  return children.flatMap((childId) => leafIdsUnder(model, childId, seen));
-}
-
 function scopedProcessModel(model: ProcessModel, leafIds: readonly Id[]): ProcessModel {
   const include = new Set(leafIds);
   const activities: Record<Id, ActivityDef> = {};
@@ -54,12 +45,91 @@ function scopedProcessModel(model: ProcessModel, leafIds: readonly Id[]): Proces
 }
 
 function firstLeafId(model: ProcessModel, rootId: Id): Id | undefined {
-  return leafIdsUnder(model, rootId)[0];
+  return leafActivityIds(model, rootId)[0];
+}
+
+function hasChildren(activity: ActivityDef | undefined): boolean {
+  return (activity?.children?.length ?? 0) > 0;
+}
+
+function scopeOptions(model: ProcessModel, scopeId: Id): ActivityDef[] {
+  const current = model.activities[scopeId];
+  return (current?.children ?? [])
+    .map((id) => model.activities[id])
+    .filter((activity): activity is ActivityDef => hasChildren(activity));
+}
+
+function lastValidScopePath(model: ProcessModel, scopePath: readonly Id[], rootId: Id): Id[] {
+  const valid: Id[] = [];
+  for (const id of scopePath) {
+    if (!model.activities[id]) break;
+    valid.push(id);
+  }
+  return valid.length > 0 ? valid : [rootId];
+}
+
+type ScopeControlProps = {
+  model: ProcessModel;
+  scopePath: readonly Id[];
+  onSelectAncestor: (index: number) => void;
+  onDrillDown: (id: Id) => void;
+  error?: string | undefined;
+};
+
+function ScopeControl({
+  model,
+  scopePath,
+  onSelectAncestor,
+  onDrillDown,
+  error,
+}: ScopeControlProps) {
+  const currentScopeId = scopePath[scopePath.length - 1]!;
+  const options = scopeOptions(model, currentScopeId);
+
+  return (
+    <section className="scope-control" aria-label="Activity decomposition scope">
+      <div className="scope-breadcrumb" aria-label="現在の表示スコープ">
+        {scopePath.map((id, index) => {
+          const activity = model.activities[id];
+          const label = activity?.name ?? id;
+          const current = index === scopePath.length - 1;
+          return (
+            <button
+              key={id}
+              className={current ? "scope-current" : "scope-ancestor"}
+              onClick={!current ? () => onSelectAncestor(index) : undefined}
+              disabled={current}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <select
+        value=""
+        onChange={(event) => {
+          if (event.target.value) onDrillDown(event.target.value);
+        }}
+        disabled={options.length === 0}
+        aria-label="下位スコープへ移動"
+      >
+        <option value="">分解先</option>
+        {options.map((activity) => (
+          <option key={activity.id} value={activity.id}>
+            {activity.name ?? activity.id}
+          </option>
+        ))}
+      </select>
+      {error && <span className="scope-error">{error}</span>}
+    </section>
+  );
 }
 
 export function ProcessViewer() {
   const [processIndex, setProcessIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM_LEVEL);
+  const [scopePath, setScopePath] = useState<Id[]>(() => [sampleProcesses[0]!.rootActivityId]);
+  const [scopeError, setScopeError] = useState<string | undefined>();
   const [heightMode, setHeightMode] = useState<HeightMode>("estimated");
   const [measuredHeights, setMeasuredHeights] = useState<ReadonlyMap<string, number>>(new Map());
   const pendingHeights = useRef<Map<string, number>>(new Map());
@@ -71,12 +141,14 @@ export function ProcessViewer() {
   const sample = sampleProcesses[processIndex] ?? initialSample;
   const model = sample.model;
   const rootId = sample.rootActivityId;
+  const validScopePath = lastValidScopePath(model, scopePath, rootId);
+  const currentScopeId = validScopePath[validScopePath.length - 1] ?? rootId;
 
   // Project by full path up to zoom level so composites never cross ancestor boundaries
   const boundary: BoundaryExpr = HIERARCHICAL_BOUNDARY_ORDER.slice(0, zoomLevel + 1);
 
   const projected = useMemo(() => {
-    const scoped = scopedProcessModel(model, leafIdsUnder(model, rootId));
+    const scoped = scopedProcessModel(model, leafActivityIds(model, currentScopeId));
     const view: ViewDef = {
       id: "current",
       layout: "lane",
@@ -84,7 +156,7 @@ export function ProcessViewer() {
       normalForm: "responsibilityBoundary",
     };
     return projectByResponsibilityBoundary(scoped, view);
-  }, [model, rootId, boundary]);
+  }, [model, currentScopeId, boundary]);
 
   const activeHeights = heightMode === "measured" ? measuredHeights : undefined;
 
@@ -125,10 +197,45 @@ export function ProcessViewer() {
     if (index === -1) return;
     const next = sampleProcesses[index]!;
     setProcessIndex(index);
+    setScopePath([next.rootActivityId]);
+    setScopeError(undefined);
     setSelectedLeafId(firstLeafId(next.model, next.rootActivityId));
     setMeasuredHeights(new Map());
     pendingHeights.current = new Map();
   }, []);
+
+  const handleSelectAncestor = useCallback((index: number) => {
+    setScopePath((path) => path.slice(0, index + 1));
+    setScopeError(undefined);
+    setMeasuredHeights(new Map());
+    pendingHeights.current = new Map();
+  }, []);
+
+  const handleDrillDown = useCallback(
+    (id: Id) => {
+      const leafIds = leafActivityIds(model, id);
+      const view: ViewDef = {
+        id: "candidate",
+        layout: "lane",
+        boundary,
+        normalForm: "responsibilityBoundary",
+      };
+
+      try {
+        projectByResponsibilityBoundary(scopedProcessModel(model, leafIds), view);
+      } catch (error) {
+        setScopeError(error instanceof Error ? error.message : String(error));
+        return;
+      }
+
+      setScopePath((path) => [...lastValidScopePath(model, path, rootId), id]);
+      setScopeError(undefined);
+      setSelectedLeafId(leafIds[0]);
+      setMeasuredHeights(new Map());
+      pendingHeights.current = new Map();
+    },
+    [boundary, model, rootId],
+  );
 
   const handleZoomIn = useCallback(() => {
     setZoomLevel((level) => (canZoomIn(level) ? level + 1 : level));
@@ -161,6 +268,13 @@ export function ProcessViewer() {
                 onZoomOut={handleZoomOut}
                 heightMode={heightMode}
                 onToggleHeightMode={handleToggleHeightMode}
+              />
+              <ScopeControl
+                model={model}
+                scopePath={validScopePath}
+                onSelectAncestor={handleSelectAncestor}
+                onDrillDown={handleDrillDown}
+                error={scopeError}
               />
             </>
           }

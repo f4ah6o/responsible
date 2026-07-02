@@ -34,8 +34,8 @@ The reference implementation covers the semantic core plus a viewer:
 4. Boundary resolution
 5. Responsibility Boundary Normal Form projection
 6. Plain JSON-serializable view model
-7. Activity `children` (read-only in the viewer Inspector; interactive drill-down is out of v0 scope)
-8. Node-based process viewer (React Flow): Activity nodes, responsibility-boundary Lanes, cross-boundary connections, viewport pan / zoom, boundary zoom, and an Activity Inspector
+7. Activity `children` as selectable drill-down / drill-out scopes
+8. Node-based process viewer (React Flow): Activity nodes, responsibility-boundary Lanes, cross-boundary connections, viewport pan / zoom, boundary zoom, and Activity decomposition scope controls
 
 The core should not include:
 
@@ -55,7 +55,7 @@ Per `README.md` (`Digital zoom`, `Design principles`), **zoom means choosing a r
 ```text
 boundary zoom    = choose responsibility boundary level (hierarchical)
 viewport pan/zoom = visual pan and zoom of the canvas (whole-overview vs. detail)
-drill-down       = choose Activity decomposition scope (children) — not implemented in the v0 viewer
+drill-down       = choose Activity decomposition scope (children)
 ```
 
 `boundary zoom` and `viewport pan/zoom` share the word "zoom" but are different concepts. Boundary zoom recomputes the projection at a different responsibility level over a fixed scope. Viewport pan/zoom only moves/scales the canvas and never changes the projection.
@@ -95,11 +95,11 @@ Viewport pan / zoom is the visual canvas operation provided by React Flow (`Cont
 
 ### Activity decomposition (children)
 
-A parent Activity can be decomposed by `children`. The v0 viewer does **not** implement interactive drill-down / drill-out. `children` are shown read-only in the Activity Inspector. This keeps `zoom ≠ drill-down` physically separated in the v0 viewer.
+A parent Activity can be decomposed by `children`. The v0 viewer implements interactive drill-down / drill-out as a scope selector: the current scope breadcrumb moves through parent Activities, and the projection is recomputed from the selected scope's leaf Activities. This keeps `zoom ≠ drill-down` physically separated in the viewer.
 
 ```text
 projection  : project(displayedProcess.leaves, boundaryLevel)   (independent of children)
-inspector   : selected Activity's children, read-only
+scope select: choose Activity decomposition scope (children)
 ```
 
 ## Process viewer
@@ -118,7 +118,7 @@ The viewer renders the normalized projected graph after same-boundary runs have 
 layout(project(displayedProcess.leaves, boundaryLevel)) -> React Flow nodes + edges + lanes
 ```
 
-The viewer also provides process selection (three construction-independent sample processes), an Activity Inspector for the selected node, viewport pan / zoom, and a separate boundary zoom control. The dependency-free SVG layout in `src/graph.ts` is kept as a public API but is no longer used by the viewer.
+The viewer also provides process selection (three construction-independent sample processes), Activity decomposition scope controls, viewport pan / zoom, and a separate boundary zoom control. The dependency-free SVG layout in `src/graph.ts` is kept as a public API but is no longer used by the viewer.
 
 ## Layering
 

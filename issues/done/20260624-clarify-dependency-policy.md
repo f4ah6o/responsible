@@ -1,9 +1,9 @@
 # Clarify dependency policy for the reference implementation
 
-Status: polished
+Status: done
 Model: GPT-5
 Created: 2026-06-24
-Updated: 2026-06-27
+Updated: 2026-07-03
 Branch: docs/20260624-clarify-dependency-policy
 Source:
 
@@ -100,3 +100,5 @@ reference implementation:
 - GitHub close comment:
   - Captured as local issue. issues/open/20260624-clarify-dependency-policy.md
 - 2026-06-27: Polished against current repo state. `docs/reference-implementation.md` already contains the dependency policy; remaining work is wording consistency and search-based verification across README and docs.
+- 2026-07-03: Started implementation from the polished backlog.
+- 2026-07-03: Implemented and verified with formatter/check/typecheck/test/build workflow.

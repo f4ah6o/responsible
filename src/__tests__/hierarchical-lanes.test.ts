@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { projectByResponsibilityBoundary } from "../index.js";
 import { buildLaneHierarchy } from "../viewer/buildLaneHierarchy.js";
 import { layoutHierarchy } from "../viewer/layoutHierarchy.js";
-import type { ProcessModel, ViewDef } from "../model.js";
+import type { ActivityDef, ProcessModel, ViewDef } from "../model.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -13,13 +13,19 @@ function makeModel(
   activities: { id: string; company: string; department: string; team: string }[],
   flowPairs: [string, string][],
 ): ProcessModel {
-  const acts: ProcessModel["activities"] = {};
+  const acts: Record<string, ActivityDef> = {};
   for (const a of activities) {
     acts[a.id] = {
       id: a.id,
       input: "X",
       output: "Y",
-      responsibility: { company: a.company, department: a.department, section: "S", team: a.team, person: a.id },
+      responsibility: {
+        company: a.company,
+        department: a.department,
+        section: "S",
+        team: a.team,
+        person: a.id,
+      },
     };
   }
   return {
@@ -47,7 +53,11 @@ test("A→B→A→B: activities maintain global flow order on x-axis across lane
       { id: "c", company: "Acme", department: "Dept", team: "T1" },
       { id: "d", company: "Acme", department: "Dept", team: "T2" },
     ],
-    [["a", "b"], ["b", "c"], ["c", "d"]],
+    [
+      ["a", "b"],
+      ["b", "c"],
+      ["c", "d"],
+    ],
   );
 
   const zoomLevel = 3; // team
@@ -93,7 +103,11 @@ test("same team name under different departments are kept separate in projection
   const view = project(model, zoomLevel);
 
   // Both activities must remain atomic (different full paths → no compositing)
-  assert.equal(view.activities.length, 2, "activities in same-named teams under different depts must not be merged");
+  assert.equal(
+    view.activities.length,
+    2,
+    "activities in same-named teams under different depts must not be merged",
+  );
   assert.equal(view.activities[0]!.kind, "atomic");
   assert.equal(view.activities[1]!.kind, "atomic");
 
@@ -101,5 +115,9 @@ test("same team name under different departments are kept separate in projection
   const hierarchy = buildLaneHierarchy(view, model.activities, zoomLevel);
   const parentA = hierarchy.activityParentId.get(view.activities[0]!.id);
   const parentB = hierarchy.activityParentId.get(view.activities[1]!.id);
-  assert.notEqual(parentA, parentB, "same-named teams under different depts must be in different lanes");
+  assert.notEqual(
+    parentA,
+    parentB,
+    "same-named teams under different depts must be in different lanes",
+  );
 });

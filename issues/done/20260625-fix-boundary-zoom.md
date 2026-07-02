@@ -1,9 +1,9 @@
 # Reference implementation のズームを責任境界レベルによる詳細度制御に修正する
 
-Status: polished
-Model: claude-opus-4-8
+Status: done
+Model: GPT-5
 Created: 2026-06-25
-Updated: 2026-06-25
+Updated: 2026-07-03
 Branch: fix-boundary-zoom
 Source:
 
@@ -109,3 +109,5 @@ README の `Digital zoom`（`Zoom = choose boundary`）および `Design princip
 - GitHub Issue createdAt: 2026-06-24T03:38:35Z
 - GitHub Issue updatedAt: 2026-06-24T15:27:52Z
 - クローズ時コメント: `Captured as local issue. issues/open/20260625-fix-boundary-zoom.md`
+- 2026-07-03: Started implementation from the polished backlog.
+- 2026-07-03: Implemented and verified with formatter/check/typecheck/test/build workflow.

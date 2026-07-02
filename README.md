@@ -23,7 +23,7 @@ It models typed Activity composition, Responsibility Boundary projection, and Re
 
 The reference implementation centers on a single-screen, node-based business process viewer (React Flow) that consumes `ProcessView`. The pure projection core (`ProcessModel -> ProcessView`) stays small and dependency-free; the viewer is allowed to depend on React and React Flow. DSL parsing, persistence, and execution runtimes remain downstream layers.
 
-Current v0 implements only the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, linear-only flows, `Effect` as plain data, and no execution or inverse-projection API. The v0 viewer does not implement interactive drill-down. See `docs/reference-implementation.md` for the v0 scope.
+Current v0 implements only the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, linear-only flows, `Effect` as plain data, and no execution or inverse-projection API. The v0 viewer includes interactive drill-down / drill-out across Activity decomposition scopes while keeping boundary zoom independent. See `docs/reference-implementation.md` for the v0 scope.
 
 Normative semantic rules are documented in `docs/semantic-core.md`. Theory background and implementation role mapping are documented in `docs/theory.md`. The older `docs/research-report.md` remains background research, not the source of normative design rules.
 
@@ -532,3 +532,6 @@ type TypeDef = PrimitiveType | RecordType | UnionType | ResultType;
 13. どの責任境界を採用するかは利用者の裁量である。
 14. 階層型、職能型、マトリクス型の組織を同じ記法で扱う。
 15. boundary zoom（責任境界レベルの切替）と viewport pan / zoom（視覚的な pan・拡大縮小）は別概念である。
+16. Activity decomposition / drill-down は表示スコープの選択であり、boundary zoom とは別概念である。
+17. Projection は read-only であり、RBNF は非可逆な quotient view として扱う。
+18. Effect は境界を跨いで観測可能な plain data であり、Activity 内部の mutation とは区別する。

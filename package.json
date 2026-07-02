@@ -8,6 +8,8 @@
     "dev": "vp dev",
     "build": "vp build",
     "check": "vp check",
+    "format": "vp format",
+    "format:check": "vp check",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import ./tools/test-register.mjs --test \"src/__tests__/**/*.test.ts\"",
     "preview": "vp preview"

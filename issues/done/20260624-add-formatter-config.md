@@ -1,9 +1,9 @@
 # コードフォーマッタ設定を導入し整形を内容変更と分離する
 
-Status: polished
+Status: done
 Model: GPT-5
 Created: 2026-06-24
-Updated: 2026-06-27
+Updated: 2026-07-03
 Branch: chore/20260624-add-formatter-config
 
 ## 概要
@@ -69,3 +69,5 @@ Branch: chore/20260624-add-formatter-config
 
 - 本イシューは `docs/2-document-semantic-core` のレビュー指摘（範囲外の整形混入）から派生した。設定不在が根本原因のため、当該ブランチの整形をどう扱うか（取り消すか別コミットに切り出すか）は本イシューの方針確定後に判断する。
 - 2026-06-27: Polished against current toolchain. `vite-plus` already provides `vp format` and `vp check`; prefer exposing those through package scripts before adding Prettier or another formatter.
+- 2026-07-03: Started implementation from the polished backlog.
+- 2026-07-03: Implemented and verified with formatter/check/typecheck/test/build workflow.

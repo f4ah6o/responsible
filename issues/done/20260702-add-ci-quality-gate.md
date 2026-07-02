@@ -1,9 +1,9 @@
 # CI に品質ゲート（check / typecheck / test / build）を追加する
 
-Status: polished
-Model: claude-fable-5
+Status: done
+Model: GPT-5
 Created: 2026-07-02
-Updated: 2026-07-02
+Updated: 2026-07-03
 Branch: ci/20260702-add-ci-quality-gate
 
 ## 概要
@@ -48,6 +48,7 @@ pull request と main への push で `pnpm run check`、`pnpm run typecheck`、
    - `pnpm run build`
 
    `setup-vp` 環境で `pnpm` が利用できない場合は、同じ内容の直接呼び出し（`vp check`、`./node_modules/.bin/tsc -p tsconfig.json --noEmit`、`node --import ./tools/test-register.mjs --test "src/__tests__/**/*.test.ts"`、`vp build`）へ置き換え、`package.json` のスクリプトと内容が一致することを workflow 内のコメントで示す。
+
 4. `permissions` は `contents: read` に限定する。
 5. `concurrency` を設定し、同一 ref の古い実行をキャンセルする（`cancel-in-progress: true`）。
 
@@ -82,3 +83,5 @@ pull request と main への push で `pnpm run check`、`pnpm run typecheck`、
 
 - `pnpm run check`（`vp check`）と `pnpm run typecheck`（`tsc --noEmit`）は重複して型検査を行う可能性があるが、両者の検査範囲が同一であることが確認されるまでは両方を実行する。
 - 2026-07-02: polish-issue: 品質基準を満たしたため polished へ遷移
+- 2026-07-03: Started implementation from the polished backlog.
+- 2026-07-03: Implemented and verified with formatter/check/typecheck/test/build workflow.
