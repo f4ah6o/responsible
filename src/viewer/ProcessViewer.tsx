@@ -1,10 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   HIERARCHICAL_BOUNDARY_ORDER,
   canZoomIn,
   canZoomOut,
+  clampZoomLevel,
+  ensureRootActivity,
   leafActivityIds,
+  parseProcessModelJson,
   projectByResponsibilityBoundary,
 } from "../index.js";
 import type {
@@ -13,15 +16,18 @@ import type {
   FlowDef,
   Id,
   ProcessModel,
+  ProcessView,
   ProjectedActivity,
   ViewDef,
 } from "../model.js";
-import { sampleProcesses } from "../sample.js";
+import { sampleProcesses, type SampleProcess } from "../sample.js";
 import { BoundaryZoomControl, type HeightMode } from "./BoundaryZoomControl";
 import { FlowCanvas } from "./FlowCanvas";
 import { HeightReportContext } from "./HeightReportContext";
+import { ModelLoader } from "./ModelLoader";
 import { ProcessSelect } from "./ProcessSelect";
 import { projectionToFlow } from "./projectionToFlow";
+import { readViewerUrlState, writeViewerUrlState } from "./urlState";
 
 const DEFAULT_ZOOM_LEVEL = 1;
 const noop = () => {};
@@ -63,10 +69,20 @@ function lastValidScopePath(model: ProcessModel, scopePath: readonly Id[], rootI
   const valid: Id[] = [];
   for (const id of scopePath) {
     if (!model.activities[id]) break;
+    if (valid.length === 0) {
+      if (id !== rootId) break;
+    } else {
+      const parent = model.activities[valid[valid.length - 1]!];
+      if (!parent?.children?.includes(id)) break;
+    }
     valid.push(id);
   }
   return valid.length > 0 ? valid : [rootId];
 }
+
+type ProjectionResult =
+  | Readonly<{ view: ProcessView; error?: undefined }>
+  | Readonly<{ view?: undefined; error: string }>;
 
 type ScopeControlProps = {
   model: ProcessModel;
@@ -125,20 +141,35 @@ function ScopeControl({
   );
 }
 
+const initialUrlState = readViewerUrlState(typeof window === "undefined" ? "" : location.hash);
+
+const initialProcess: SampleProcess =
+  sampleProcesses.find((process) => process.id === initialUrlState.processId) ??
+  sampleProcesses[0]!;
+
 export function ProcessViewer() {
-  const [processIndex, setProcessIndex] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM_LEVEL);
-  const [scopePath, setScopePath] = useState<Id[]>(() => [sampleProcesses[0]!.rootActivityId]);
+  const [processes, setProcesses] = useState<readonly SampleProcess[]>(sampleProcesses);
+  const [processId, setProcessId] = useState(initialProcess.id);
+  const [zoomLevel, setZoomLevel] = useState(() =>
+    initialUrlState.zoomLevel === undefined
+      ? DEFAULT_ZOOM_LEVEL
+      : clampZoomLevel(initialUrlState.zoomLevel),
+  );
+  const [scopePath, setScopePath] = useState<readonly Id[]>(() =>
+    initialUrlState.processId === initialProcess.id && initialUrlState.scopePath
+      ? initialUrlState.scopePath
+      : [initialProcess.rootActivityId],
+  );
   const [scopeError, setScopeError] = useState<string | undefined>();
+  const [importError, setImportError] = useState<string | undefined>();
   const [heightMode, setHeightMode] = useState<HeightMode>("estimated");
   const [measuredHeights, setMeasuredHeights] = useState<ReadonlyMap<string, number>>(new Map());
   const pendingHeights = useRef<Map<string, number>>(new Map());
-  const initialSample = sampleProcesses[0]!;
   const [selectedLeafId, setSelectedLeafId] = useState<Id | undefined>(() =>
-    firstLeafId(initialSample.model, initialSample.rootActivityId),
+    firstLeafId(initialProcess.model, initialProcess.rootActivityId),
   );
 
-  const sample = sampleProcesses[processIndex] ?? initialSample;
+  const sample = processes.find((process) => process.id === processId) ?? processes[0]!;
   const model = sample.model;
   const rootId = sample.rootActivityId;
   const validScopePath = lastValidScopePath(model, scopePath, rootId);
@@ -147,7 +178,7 @@ export function ProcessViewer() {
   // Project by full path up to zoom level so composites never cross ancestor boundaries
   const boundary: BoundaryExpr = HIERARCHICAL_BOUNDARY_ORDER.slice(0, zoomLevel + 1);
 
-  const projected = useMemo(() => {
+  const projection = useMemo<ProjectionResult>(() => {
     const scoped = scopedProcessModel(model, leafActivityIds(model, currentScopeId));
     const view: ViewDef = {
       id: "current",
@@ -155,15 +186,38 @@ export function ProcessViewer() {
       boundary,
       normalForm: "responsibilityBoundary",
     };
-    return projectByResponsibilityBoundary(scoped, view);
+    try {
+      return { view: projectByResponsibilityBoundary(scoped, view) };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
   }, [model, currentScopeId, boundary]);
 
+  const projected = projection.view;
   const activeHeights = heightMode === "measured" ? measuredHeights : undefined;
 
   const flow = useMemo(
-    () => projectionToFlow(projected, model.activities, selectedLeafId, zoomLevel, activeHeights),
+    () =>
+      projected
+        ? projectionToFlow(projected, model.activities, selectedLeafId, zoomLevel, activeHeights)
+        : { nodes: [], edges: [], lanes: [] },
     [projected, model, selectedLeafId, zoomLevel, activeHeights],
   );
+
+  const scopeKey = validScopePath.join(",");
+  useEffect(() => {
+    const hash = writeViewerUrlState({
+      processId,
+      zoomLevel,
+      scopePath: scopeKey.split(","),
+    });
+    history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
+  }, [processId, zoomLevel, scopeKey]);
+
+  const resetHeights = useCallback(() => {
+    setMeasuredHeights(new Map());
+    pendingHeights.current = new Map();
+  }, []);
 
   const handleHeightMeasured = useCallback((id: string, height: number) => {
     pendingHeights.current.set(id, height);
@@ -185,31 +239,79 @@ export function ProcessViewer() {
 
   const handleNodeClick = useCallback(
     (nodeId: string) => {
-      const node = projected.activities.find((activity) => activity.id === nodeId);
+      const node = projected?.activities.find((activity) => activity.id === nodeId);
       if (!node) return;
       setSelectedLeafId(sourceIdsOf(node)[0]);
     },
     [projected],
   );
 
-  const handleProcessChange = useCallback((id: string) => {
-    const index = sampleProcesses.findIndex((process) => process.id === id);
-    if (index === -1) return;
-    const next = sampleProcesses[index]!;
-    setProcessIndex(index);
-    setScopePath([next.rootActivityId]);
-    setScopeError(undefined);
-    setSelectedLeafId(firstLeafId(next.model, next.rootActivityId));
-    setMeasuredHeights(new Map());
-    pendingHeights.current = new Map();
-  }, []);
+  const selectProcess = useCallback(
+    (process: SampleProcess) => {
+      setProcessId(process.id);
+      setScopePath([process.rootActivityId]);
+      setScopeError(undefined);
+      setSelectedLeafId(firstLeafId(process.model, process.rootActivityId));
+      resetHeights();
+    },
+    [resetHeights],
+  );
 
-  const handleSelectAncestor = useCallback((index: number) => {
-    setScopePath((path) => path.slice(0, index + 1));
-    setScopeError(undefined);
-    setMeasuredHeights(new Map());
-    pendingHeights.current = new Map();
-  }, []);
+  const handleProcessChange = useCallback(
+    (id: string) => {
+      const process = processes.find((candidate) => candidate.id === id);
+      if (process) selectProcess(process);
+    },
+    [processes, selectProcess],
+  );
+
+  const handleLoadFile = useCallback(
+    (file: File) => {
+      file
+        .text()
+        .then((text) => {
+          const result = parseProcessModelJson(text);
+          if (!result.ok) {
+            const shown = result.issues
+              .slice(0, 3)
+              .map((issue) => `${issue.path}: ${issue.message}`)
+              .join(" / ");
+            const rest = result.issues.length - 3;
+            setImportError(
+              `${file.name} を読み込めませんでした — ${shown}${rest > 0 ? ` ほか${rest}件` : ""}`,
+            );
+            return;
+          }
+
+          const rooted = ensureRootActivity(result.model);
+          const title = file.name.replace(/\.json$/i, "") || file.name;
+          const imported: SampleProcess = {
+            id: `imported:${title}:${Date.now()}`,
+            title: `${title}（読み込み）`,
+            rootActivityId: rooted.rootActivityId,
+            model: rooted.model,
+          };
+          setProcesses((prev) => [...prev, imported]);
+          setImportError(undefined);
+          selectProcess(imported);
+        })
+        .catch((error: unknown) => {
+          setImportError(
+            `${file.name} を読み込めませんでした — ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
+    },
+    [selectProcess],
+  );
+
+  const handleSelectAncestor = useCallback(
+    (index: number) => {
+      setScopePath((path) => path.slice(0, index + 1));
+      setScopeError(undefined);
+      resetHeights();
+    },
+    [resetHeights],
+  );
 
   const handleDrillDown = useCallback(
     (id: Id) => {
@@ -231,22 +333,19 @@ export function ProcessViewer() {
       setScopePath((path) => [...lastValidScopePath(model, path, rootId), id]);
       setScopeError(undefined);
       setSelectedLeafId(leafIds[0]);
-      setMeasuredHeights(new Map());
-      pendingHeights.current = new Map();
+      resetHeights();
     },
-    [boundary, model, rootId],
+    [boundary, model, rootId, resetHeights],
   );
 
   const handleZoomIn = useCallback(() => {
     setZoomLevel((level) => (canZoomIn(level) ? level + 1 : level));
-    setMeasuredHeights(new Map());
-    pendingHeights.current = new Map();
-  }, []);
+    resetHeights();
+  }, [resetHeights]);
   const handleZoomOut = useCallback(() => {
     setZoomLevel((level) => (canZoomOut(level) ? level - 1 : level));
-    setMeasuredHeights(new Map());
-    pendingHeights.current = new Map();
-  }, []);
+    resetHeights();
+  }, [resetHeights]);
 
   return (
     <HeightReportContext.Provider value={heightMode === "measured" ? handleHeightMeasured : noop}>
@@ -255,10 +354,18 @@ export function ProcessViewer() {
           nodes={flow.nodes}
           edges={flow.edges}
           onNodeClick={handleNodeClick}
+          overlay={
+            projection.error && (
+              <div className="projection-error" role="alert">
+                <strong>このプロセスは v0 では表示できません</strong>
+                <p>{projection.error}</p>
+              </div>
+            )
+          }
           toolbar={
             <>
               <ProcessSelect
-                processes={sampleProcesses}
+                processes={processes}
                 value={sample.id}
                 onChange={handleProcessChange}
               />
@@ -276,6 +383,7 @@ export function ProcessViewer() {
                 onDrillDown={handleDrillDown}
                 error={scopeError}
               />
+              <ModelLoader onLoadFile={handleLoadFile} error={importError} />
             </>
           }
         />

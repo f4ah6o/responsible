@@ -14,7 +14,7 @@ viewer runtime dependencies: react, react-dom, @xyflow/react
 reference language: TypeScript / JavaScript
 ```
 
-The core (`src/model.ts`, `src/boundary.ts`, `src/hierarchy.ts`, `src/normalize.ts`, `src/semantic.ts`, `src/graph.ts`, `src/index.ts`) remains plain TypeScript with pure functions and plain data structures. It must not import React, Vue, Svelte, canvas libraries, graph layout engines, schema validators, or parser generators.
+The core (`src/model.ts`, `src/boundary.ts`, `src/hierarchy.ts`, `src/normalize.ts`, `src/semantic.ts`, `src/graph.ts`, `src/validate.ts`, `src/index.ts`) remains plain TypeScript with pure functions and plain data structures. It must not import React, Vue, Svelte, canvas libraries, graph layout engines, schema validator libraries, or parser generators. Model validation (`src/validate.ts`) is hand-written pure functions over plain data, not a schema-validator dependency.
 
 The core package exposes pure functions and plain data structures.
 
@@ -120,6 +120,8 @@ layout(project(displayedProcess.leaves, boundaryLevel)) -> React Flow nodes + ed
 
 The viewer also provides process selection (three construction-independent sample processes), Activity decomposition scope controls, viewport pan / zoom, and a separate boundary zoom control. The dependency-free SVG layout in `src/graph.ts` is kept as a public API but is no longer used by the viewer.
 
+In addition, the viewer supports loading user-provided `responsible.v0` JSON models (`src/viewer/ModelLoader.tsx`): files are parsed and validated by the core (`parseProcessModelJson`), flat models are wrapped by `ensureRootActivity`, and validation or v0 projection errors are shown in place without crashing the app (a top-level `ErrorBoundary` guards against unexpected render errors). The current process / boundary zoom level / decomposition scope are synchronized to the URL hash (`src/viewer/urlState.ts`) so a view can be shared as a link.
+
 ## Layering
 
 ```text
@@ -140,6 +142,11 @@ src/graph.ts
 
 src/semantic.ts
   Semantic vocabulary, plain-data Effect, directed-effect validation.
+
+src/validate.ts
+  Untrusted-input validation for ProcessModel (structural shape,
+  referential integrity, decomposition-cycle detection), JSON parsing,
+  and root inference / synthetic-root wrapping for flat models.
 
 src/index.ts
   Public API exports (pure projection core only).

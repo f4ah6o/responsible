@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "responsible.v0",
+  "activities": {
+    "receive_order": {
+      "id": "receive_order",
+      "name": "注文を受け付ける",
+      "input": "注文リクエスト",
+      "output": "受付済み注文",
+      "status": "defined",
+      "responsibility": {
+        "company": "みなと商事",
+        "department": "営業部",
+        "section": "受注課",
+        "team": "受注チーム",
+        "person": "田中"
+      }
+    },
+    "check_credit": {
+      "id": "check_credit",
+      "name": "与信を確認する",
+      "input": "受付済み注文",
+      "output": "与信確認済み注文",
+      "status": "defined",
+      "responsibility": {
+        "company": "みなと商事",
+        "department": "管理部",
+        "section": "審査課",
+        "team": "与信チーム",
+        "person": "鈴木"
+      }
+    },
+    "allocate_stock": {
+      "id": "allocate_stock",
+      "name": "在庫を引き当てる",
+      "input": "与信確認済み注文",
+      "output": "引当済み注文",
+      "status": "defined",
+      "responsibility": {
+        "company": "みなと商事",
+        "department": "物流部",
+        "section": "在庫管理課",
+        "team": "在庫チーム",
+        "person": "高橋"
+      }
+    },
+    "pick_and_pack": {
+      "id": "pick_and_pack",
+      "name": "ピッキングして梱包する",
+      "input": "引当済み注文",
+      "output": "出荷梱包",
+      "status": "defined",
+      "responsibility": {
+        "company": "みなと商事",
+        "department": "物流部",
+        "section": "倉庫課",
+        "team": "出荷チーム",
+        "person": "伊藤"
+      }
+    },
+    "ship_order": {
+      "id": "ship_order",
+      "name": "出荷する",
+      "input": "出荷梱包",
+      "output": "出荷済み注文",
+      "status": "defined",
+      "responsibility": {
+        "company": "みなと商事",
+        "department": "物流部",
+        "section": "倉庫課",
+        "team": "出荷チーム",
+        "person": "伊藤"
+      }
+    },
+    "issue_invoice": {
+      "id": "issue_invoice",
+      "name": "請求書を発行する",
+      "input": "出荷済み注文",
+      "output": "請求書",
+      "status": "defined",
+      "responsibility": {
+        "company": "みなと商事",
+        "department": "管理部",
+        "section": "経理課",
+        "team": "請求チーム",
+        "person": "渡辺"
+      }
+    }
+  },
+  "flows": [
+    { "from": "receive_order", "to": "check_credit" },
+    { "from": "check_credit", "to": "allocate_stock" },
+    { "from": "allocate_stock", "to": "pick_and_pack" },
+    { "from": "pick_and_pack", "to": "ship_order" },
+    { "from": "ship_order", "to": "issue_invoice" }
+  ]
+}
