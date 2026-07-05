@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "型付き Activity と責任境界による業務プロセスモデルのリファレンス実装。",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vp dev",
