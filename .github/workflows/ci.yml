@@ -29,13 +29,13 @@ jobs:
         run: vp install
 
       - name: Check format and lint
-        run: pnpm run check
+        run: vp run check
 
       - name: Typecheck
-        run: pnpm run typecheck
+        run: vp run typecheck
 
       - name: Test
-        run: pnpm test
+        run: vp run test
 
       - name: Build
-        run: pnpm run build
+        run: vp run build
