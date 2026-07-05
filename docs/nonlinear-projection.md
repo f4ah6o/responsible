@@ -1,5 +1,7 @@
 # Nonlinear projection design
 
+English | [日本語](nonlinear-projection.ja.md)
+
 This document defines the design target for extending Responsibility Boundary Normal Form projection beyond the v0 linear-flow subset. It is normative for nonlinear projection work.
 
 ## Implementation status

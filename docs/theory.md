@@ -1,5 +1,7 @@
 # Theory map
 
+English | [日本語](theory.ja.md)
+
 This document is informative. It maps theory families to implementation decisions in `responsible`; it is not a requirement to implement every theory in v0.
 
 ## Implementation roles
