@@ -118,7 +118,7 @@ The viewer renders the normalized projected graph after same-boundary runs have 
 layout(project(displayedProcess.leaves, boundaryLevel)) -> React Flow nodes + edges + lanes
 ```
 
-The viewer also provides process selection (three construction-independent sample processes), Activity decomposition scope controls, viewport pan / zoom, and a separate boundary zoom control. The dependency-free SVG layout in `src/graph.ts` is kept as a public API but is no longer used by the viewer.
+The viewer also provides process selection (four construction-independent sample processes, including a branching / merging estimate-approval flow), Activity decomposition scope controls, viewport pan / zoom, and a separate boundary zoom control. The dependency-free SVG layout in `src/graph.ts` is kept as a public API but is no longer used by the viewer.
 
 In addition, the viewer supports loading user-provided `responsible.v0` JSON models (`src/viewer/ModelLoader.tsx`): files are parsed and validated by the core (`parseProcessModelJson`), flat models are wrapped by `ensureRootActivity`, and validation or v0 projection errors are shown in place without crashing the app (a top-level `ErrorBoundary` guards against unexpected render errors). The current process / boundary zoom level / decomposition scope are synchronized to the URL hash (`src/viewer/urlState.ts`) so a view can be shared as a link.
 
@@ -135,7 +135,11 @@ src/hierarchy.ts
   Hierarchical responsibility-boundary zoom order and level helpers.
 
 src/normalize.ts
-  Responsibility Boundary Normal Form projection.
+  Responsibility Boundary Normal Form projection (v0 linear projector).
+
+src/quotient.ts
+  Graph quotient projection over DAGs (branching / merging); linear flows
+  remain a byte-identical special case of the v0 linear projector.
 
 src/graph.ts
   Dependency-free graph layout (public API kept; not used by the viewer).
@@ -152,7 +156,8 @@ src/index.ts
   Public API exports (pure projection core only).
 
 src/sample.ts
-  Three construction-independent sample ProcessModels and a registry.
+  Four construction-independent sample ProcessModels (one with branching
+  and merging) and a registry.
 
 src/main.tsx, src/viewer/
   React + React Flow viewer. Consumes ProcessView from the core.
@@ -171,9 +176,9 @@ Future packages can split the core and the viewer once the model stabilizes.
 
 Package names are placeholders.
 
-## v0 limitation
+## Projection capabilities
 
-The initial v0 projection intentionally supports linear flows only.
+The v0 projector (`projectByResponsibilityBoundary`) intentionally supports linear flows only.
 
 ```text
 A -> B -> C -> D
@@ -185,27 +190,27 @@ This is enough to prove the core idea:
 same responsibility boundary run -> composite activity
 ```
 
-Branching and merging require graph quotient projection.
-That should be implemented after the linear semantics are stable.
+Branching and merging are handled by the graph quotient projector (`projectDagByResponsibilityBoundary` in `src/quotient.ts`), implemented per `docs/nonlinear-projection.md`. It supports finite DAGs, keeps linear flows as a byte-identical special case, and rejects cycles and weakly disconnected scopes. The viewer uses the DAG projector.
 
 ```text
-v0:
-  linear flow projection
-
-later:
-  graph quotient projection
+implemented:
+  linear flow projection (v0 projector, kept as the stricter subset)
+  graph quotient projection over DAGs
   branching
   merging
-  parallel activities
-  exception paths
+
+later:
+  loop semantics
+  parallel semantics
+  exception-path presentation
 ```
 
 ### Assertable subset (v0)
 
 Current v0 implements only the assertable subset of the semantic core in `docs/semantic-core.md`. It does not implement the future execution API.
 
-- `INV-1`–`INV-6` are covered by executable `node:test` tests under `src/__tests__/`.
-- Linear-only: branching, merging, cycles, multiple starts, and disconnected flows are rejected.
+- `INV-1`–`INV-6` are covered by executable `node:test` tests under `src/__tests__/`; the quotient projector additionally covers `INV-7` / `INV-8` scenarios from `docs/nonlinear-projection.md`.
+- The v0 linear projector rejects branching, merging, cycles, multiple starts, and disconnected flows; the DAG quotient projector accepts branching and merging while still rejecting cycles and weakly disconnected scopes.
 - `Effect` is plain, JSON-serializable data. `validateDirectedEffect` checks that the declared source boundary matches the source Activity's projection under the selected boundary, and that a directed target is a known boundary. It is not an execution API and `Effect` is not embedded in the `responsible.v0` model schema.
 - No execution API: `World`, `ActivityResult`, `seq`, and runtime `requires` / `ensures` predicate checking are future semantic targets, not v0 API.
 - No inverse projection API: RBNF collapse is treated as non-reversible.

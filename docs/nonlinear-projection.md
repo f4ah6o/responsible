@@ -1,6 +1,19 @@
 # Nonlinear projection design
 
-This document defines the design target for extending Responsibility Boundary Normal Form projection beyond the current v0 linear-flow subset. It is normative for future nonlinear projection issues, but it does not change the current `responsible.v0` implementation.
+This document defines the design target for extending Responsibility Boundary Normal Form projection beyond the v0 linear-flow subset. It is normative for nonlinear projection work.
+
+## Implementation status
+
+The core quotient projection described here is implemented in `src/quotient.ts` as `projectDagByResponsibilityBoundary` and covered by `src/__tests__/quotient.test.ts`:
+
+- Branching and merging over finite DAGs are supported; cycles and weakly disconnected scopes are rejected with explicit errors.
+- Partitioning uses maximal weakly connected same-boundary components of the induced same-boundary subgraph (the v1 subset named below).
+- The linear case is a special case: for linear models the result is byte-identical to `projectByResponsibilityBoundary`, which is kept as the stricter v0 linear projector.
+- Type-ref policy (see below): a single entry/exit ref is kept as-is; multiple distinct refs are joined product-style with `" & "` (jointly required). Alternatives remain the modeler's explicit choice via `Result` / union output types.
+- Schema/version decision: nonlinear projection is a projection capability over `responsible.v0` data; no `responsible.v1` model metadata is required.
+- The reference viewer uses the DAG projector; the `見積承認（分岐・合流）` sample process exercises branch and merge at every boundary level.
+
+Remaining future work: loop semantics, parallel semantics, exception-path presentation, and richer viewer edge routing.
 
 ## Graph class
 

@@ -38,7 +38,7 @@ pnpm run build  # dist/ に本番ビルド
 - 動くサンプル: [`examples/order-fulfillment.json`](examples/order-fulfillment.json)（受注〜請求の 6 Activity）。
 - 読み込み時に構造検証（`validateProcessModel`）が走り、問題があれば JSON パス付きのエラーが表示される。
 - 階層（`children`）を持たないフラットなモデルは、自動的に合成ルート Activity で包まれて表示される（`ensureRootActivity`）。
-- v0 の射影は線形フローのみ対応。分岐・合流を含むモデルは読み込めるが、該当スコープの表示時にエラーメッセージが表示される（アプリは落ちない）。
+- 射影は有向非巡回（DAG）フローに対応し、分岐・合流を含むモデルもそのまま表示できる（graph quotient projection）。循環を含むモデルは読み込めるが、該当スコープの表示時にエラーメッセージが表示される（アプリは落ちない）。
 
 ビューアの表示状態（プロセス / 境界ズームレベル / 分解スコープ）は URL ハッシュ（`#p=…&z=…&s=…`）に同期されるため、URL を共有すれば同じビューを再現できる（読み込んだ JSON 自体は URL に含まれない）。
 
@@ -65,7 +65,7 @@ It models typed Activity composition, Responsibility Boundary projection, and Re
 
 The reference implementation centers on a single-screen, node-based business process viewer (React Flow) that consumes `ProcessView`. The pure projection core (`ProcessModel -> ProcessView`) stays small and dependency-free; the viewer is allowed to depend on React and React Flow. DSL parsing, persistence, and execution runtimes remain downstream layers.
 
-Current v0 implements only the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, linear-only flows, `Effect` as plain data, and no execution or inverse-projection API. The v0 viewer includes interactive drill-down / drill-out across Activity decomposition scopes while keeping boundary zoom independent. See `docs/reference-implementation.md` for the v0 scope.
+Current v0 implements the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, `Effect` as plain data, and no execution or inverse-projection API. Projection supports directed acyclic flows — branching and merging via graph quotient projection (`projectDagByResponsibilityBoundary`, designed in `docs/nonlinear-projection.md`), with the stricter linear projector retained as a special case; cycles are rejected until a loop semantics exists. The viewer includes interactive drill-down / drill-out across Activity decomposition scopes while keeping boundary zoom independent. See `docs/reference-implementation.md` for the scope.
 
 Normative semantic rules are documented in `docs/semantic-core.md`. Theory background and implementation role mapping are documented in `docs/theory.md`. The older `docs/research-report.md` remains background research, not the source of normative design rules.
 

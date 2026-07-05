@@ -8,7 +8,7 @@ import {
   ensureRootActivity,
   leafActivityIds,
   parseProcessModelJson,
-  projectByResponsibilityBoundary,
+  projectDagByResponsibilityBoundary,
 } from "../index.js";
 import type {
   ActivityDef,
@@ -187,7 +187,7 @@ export function ProcessViewer() {
       normalForm: "responsibilityBoundary",
     };
     try {
-      return { view: projectByResponsibilityBoundary(scoped, view) };
+      return { view: projectDagByResponsibilityBoundary(scoped, view) };
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     }
@@ -324,7 +324,7 @@ export function ProcessViewer() {
       };
 
       try {
-        projectByResponsibilityBoundary(scopedProcessModel(model, leafIds), view);
+        projectDagByResponsibilityBoundary(scopedProcessModel(model, leafIds), view);
       } catch (error) {
         setScopeError(error instanceof Error ? error.message : String(error));
         return;
@@ -357,7 +357,7 @@ export function ProcessViewer() {
           overlay={
             projection.error && (
               <div className="projection-error" role="alert">
-                <strong>このプロセスは v0 では表示できません</strong>
+                <strong>このスコープは表示できません</strong>
                 <p>{projection.error}</p>
               </div>
             )

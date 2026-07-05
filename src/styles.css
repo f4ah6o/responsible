@@ -352,7 +352,15 @@ button {
   background: transparent;
   font: inherit;
 }
+.activity-card .react-flow__handle {
+  width: 6px;
+  height: 6px;
+  border: none;
+  background: #94a3b8;
+  opacity: 0.6;
+}
 .activity-card {
+  position: relative;
   width: 180px;
   display: grid;
   gap: 4px;
