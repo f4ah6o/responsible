@@ -6,6 +6,8 @@
 
 **Business process modeling with typed Activities and responsibility boundaries.**
 
+English | [日本語](README.ja.md)
+
 `responsible` models work as the composition of typed Activities — `Activity<Input, Output>` — and renders the same model at any organizational granularity by projecting it onto a chosen _responsibility boundary_. It ships as a small, dependency-free semantic core plus an interactive, node-based process viewer.
 
 **[Live demo →](https://f4ah6o.github.io/responsible/)**
