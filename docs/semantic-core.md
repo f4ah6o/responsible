@@ -1,5 +1,7 @@
 # Semantic core
 
+English | [日本語](semantic-core.ja.md)
+
 This document is normative for the `responsible` semantic core.
 
 The current reference implementation is still the small TypeScript model described in `docs/reference-implementation.md`: plain data structures, pure functions, and `ProcessModel -> ProcessView`. The TypeScript snippets below that mention `World`, `ActivityResult`, `Effect`, or `BoundaryProjection` are future semantic targets, not current exported API from `src/model.ts`.

@@ -1,165 +1,174 @@
-# Activity, 前提, 成立, 作用
+# Activity, Requires, Ensures, Effect
 
-Responsible は、状態遷移図ではなく、責任ある Activity の合成として状態遷移が立ち上がる記法である。
+English | [日本語](activity-effects.ja.md)
 
-この文書では、データへの作用、副作用、mutation を中心概念にせず、Activity を中心に世界の変化を記述するための最小語彙を定義する。
+Responsible is a notation in which state transitions arise from the composition of responsible Activities, rather than being drawn as a state-transition diagram.
 
-## 最小語彙
+This document defines a minimal vocabulary for describing change in the world centered on Activity, without treating data mutation, side effects, or mutation itself as the central concept.
+
+## Minimal vocabulary
 
 ```text
-Activity = 活動
-requires = 前提
-ensures  = 成立
-effect   = 作用
+Activity = Activity
+requires = precondition (requires)
+ensures  = established fact (ensures)
+effect   = Effect
 ```
 
 ## Activity
 
-Activity は、責任主体が行う活動である。
+An Activity is an activity performed by a responsible party.
 
 ```text
 Activity
-  = 責任主体が、責任境界の内側で行う活動
+  = an activity performed by a responsible party,
+    inside a Responsibility Boundary
 ```
 
-Activity は単なるデータ操作ではない。
+An Activity is not merely a data operation.
 
-Activity は、前提を満たす世界に対して行われ、完了後に新しい事実を成立させる。
+An Activity is performed against a world that satisfies its preconditions, and establishes new facts upon completion.
 
 ```text
 Activity:
-  前提を満たす世界
-    -> 新しい事実が成立した世界
+  a world that satisfies the preconditions
+    -> a world in which new facts are established
 ```
 
-## 前提
+## Requires
 
-`requires` は、Activity が責任をもって開始できるために、すでに成立していなければならない条件である。
+`requires` is a condition that must already be established for an Activity to start responsibly.
 
 ```text
-requires = 前提
+requires = precondition
 ```
 
-例:
+Example:
 
 ```text
-activity "申請を提出する" by "申請者" {
+activity "Submit application" by "Applicant" {
   requires {
-    申請.status = draft
-    必須項目 = complete
+    Application.status = draft
+    RequiredFields = complete
   }
 }
 ```
 
-これは次の意味である。
+This means the following.
 
 ```text
-申請が下書きであり、必須項目が揃っていることを前提に、
-申請者は「申請を提出する」という Activity を行える。
+Given that the application is a draft and the required fields
+are complete, the Applicant can perform the Activity
+"Submit application."
 ```
 
-前提は、単なる input ではない。
+A precondition is not merely an input.
 
 ```text
 input / uses
-  判断や活動に使う値
+  values used for judgment or the activity itself
 
-requires / 前提
-  活動が成立するために世界に成り立っているべき条件
+requires / precondition
+  a condition that must hold in the world for the activity to
+  be valid
 ```
 
-## 成立
+## Ensures
 
-`ensures` は、Activity が完了した後に世界に成立している事実である。
+`ensures` is a fact that is established in the world after an Activity completes.
 
 ```text
-ensures = 成立
+ensures = established fact
 ```
 
-例:
+Example:
 
 ```text
-activity "申請を提出する" by "申請者" {
+activity "Submit application" by "Applicant" {
   ensures {
-    申請.status = submitted
-    提出事実(申請, 申請者) = true
+    Application.status = submitted
+    SubmissionFact(Application, Applicant) = true
   }
 }
 ```
 
-これは次の意味である。
+This means the following.
 
 ```text
-Activity の完了によって、
-申請が提出済みであること、
-申請者が提出したこと、
-という事実が成立する。
+Completion of the Activity establishes the facts that the
+application has been submitted, and that the Applicant
+submitted it.
 ```
 
-成立は、DB 更新やオブジェクトの mutation ではない。
+An established fact is not a DB update or an object mutation.
 
 ```text
-避けたい表現:
-  update 申請.status submitted
-  insert 提出履歴
+Expressions to avoid:
+  update Application.status submitted
+  insert SubmissionHistory
 
-Responsible での表現:
-  申請.status = submitted が成立する
-  提出事実(申請, 申請者) = true が成立する
+Expression in Responsible:
+  Application.status = submitted is established
+  SubmissionFact(Application, Applicant) = true is established
 ```
 
-実装では update / insert / event append になる可能性がある。
-しかし Responsible の主語彙では、操作ではなく、Activity 後の世界に成立している事実を書く。
+The implementation may end up as an update / insert / event append.
+But in Responsible's primary vocabulary, we write the facts established
+in the world after the Activity, not the operation itself.
 
-## 作用
+## Effect
 
-Effect は、Activity の結果が責任境界を越えて観測可能になることである。
+An Effect is a result of an Activity becoming observable across a Responsibility Boundary.
 
 ```text
-Effect は、Activity の結果が責任境界を越えて観測可能になること。
+An Effect is a result of an Activity becoming observable
+across a Responsibility Boundary.
 ```
 
-日本語の概念名は `作用` とする。
+The Japanese term for this concept is `作用`.
 
 ```text
-effect = 作用
+effect = Effect
 ```
 
-例:
+Example:
 
 ```text
-activity "申請を提出する" by "申請者" {
+activity "Submit application" by "Applicant" {
   requires {
-    申請.status = draft
-    必須項目 = complete
+    Application.status = draft
+    RequiredFields = complete
   }
 
   ensures {
-    申請.status = submitted
-    提出事実(申請, 申請者) = true
+    Application.status = submitted
+    SubmissionFact(Application, Applicant) = true
   }
 
   effects {
-    承認依頼 to 課長
+    ApprovalRequest to Manager
   }
 }
 ```
 
-これは次の意味である。
+This means the following.
 
 ```text
-申請者の責任境界で成立した「申請が提出済みである」という事実が、
-承認依頼として課長の責任境界から観測可能になる。
+The fact "the application has been submitted," established within
+the Applicant's Responsibility Boundary, becomes observable from
+the Manager's Responsibility Boundary as an approval request.
 ```
 
-作用は、世界を変える。
+An Effect changes the world.
 
-ただし Responsible で重要なのは、世界の変化を低レベルの mutation として書くことではない。
-重要なのは、ある責任境界の内側で成立した事実が、別の責任境界から観測可能になることである。
+However, what matters in Responsible is not writing the change to the
+world as a low-level mutation. What matters is that a fact established
+inside one Responsibility Boundary becomes observable from another
+Responsibility Boundary.
 
-## Activity の合成
+## Composition of Activities
 
-Activity は、成立と前提によって接続される。
+Activities are connected through ensures and requires.
 
 ```text
 Activity A ensures X
@@ -167,111 +176,116 @@ Activity A effects X to Boundary B
 Activity B requires X
 ```
 
-日本語では次のように読める。
+In other words:
 
 ```text
-A の成立が、B の前提になる。
+What A ensures becomes what B requires.
 ```
 
-この接続によって Activity が並ぶ。
+This connection lines up Activities in sequence.
 
 ```text
-申請を作成する
-  -> 申請を提出する
-  -> 申請を承認する
-  -> 次工程を開始する
+Create application
+  -> Submit application
+  -> Approve application
+  -> Start next process
 ```
 
-状態遷移は、この Activity の並びから導出される。
+The state transition is derived from this sequence of Activities.
 
 ```text
 absent -> draft -> submitted -> approved
 ```
 
-Responsible は状態遷移を直接主語にしない。
-Activity の合成として状態遷移が立ち上がる。
+Responsible does not take the state transition as its direct subject.
+The state transition arises from the composition of Activities.
 
-## 関数型パラダイムとの対応
+## Correspondence with the functional paradigm
 
-関数型パラダイムに寄せると、Activity は次のように読める。
+Read through the lens of the functional paradigm, an Activity looks like this:
 
 ```text
 Activity : World -> (World, Effect[])
 ```
 
-ただし、Effect を Activity の内部に隠して実行しない。
-Effect を値として明示する。
+However, the Effect is not hidden inside the Activity and executed implicitly.
+The Effect is made explicit as a value.
 
-Responsible では、次のように対応する。
+In Responsible, the correspondence is as follows.
 
 ```text
 requires
-  Activity に入る前の世界の条件
+  the condition of the world before entering the Activity
 
 ensures
-  Activity 後の世界に成立する事実
+  the fact established in the world after the Activity
 
 effects
-  その成立が責任境界を越えて観測可能になる作用
+  the Effect by which that established fact becomes observable
+  across a Responsibility Boundary
 ```
 
 ## Data / State / Mutation
 
-Responsible の主語彙では、mutation を中心概念にしない。
+Responsible's primary vocabulary does not treat mutation as the central concept.
 
 ```text
 Data
-  = 値
+  = a value
 
 State
-  = ある時点で世界に成立している事実の集合
+  = the set of facts established in the world at a given point
+    in time
 
 Mutation
-  = 実装上の変更操作
+  = an implementation-level change operation
 ```
 
-Responsible が書くのは、操作ではなく、活動後に成立している事実である。
+What Responsible writes is not the operation, but the fact established after the activity.
 
-例:
+Example:
 
 ```text
-activity "申請を承認する" by "課長" {
+activity "Approve application" by "Manager" {
   requires {
-    申請.status = submitted
-    承認権限(課長, 申請) = true
+    Application.status = submitted
+    ApprovalAuthority(Manager, Application) = true
   }
 
   ensures {
-    申請.status = approved
-    承認事実(申請, 課長) = true
+    Application.status = approved
+    ApprovalFact(Application, Manager) = true
   }
 
   effects {
-    承認結果 to 申請者
-    次工程依頼 to 経理
+    ApprovalResult to Applicant
+    NextProcessRequest to Accounting
   }
 }
 ```
 
-ここで中心になるのは `申請.status を update する` ではない。
+What matters here is not `update Application.status`.
 
-中心になるのは次である。
+What matters is the following.
 
 ```text
-課長の Activity によって、
-申請が承認済みであること、
-課長が承認したこと、
-という事実が成立する。
+Through the Manager's Activity, the facts are established that the
+application has been approved, and that the Manager approved it.
 
-その成立が、申請者と経理の責任境界へ作用する。
+This established fact acts as an Effect on the Responsibility
+Boundaries of the Applicant and Accounting.
 ```
 
-## まとめ
+## Summary
 
 ```text
-Activity は、前提を満たす世界に対して行われる。
-Activity の完了によって、新しい事実が成立する。
-作用は、その成立が責任境界を越えて観測可能になることである。
-状態遷移は、責任ある Activity の合成として立ち上がる。
-mutation は実装ビューであり、Responsible の主語彙ではない。
+An Activity is performed against a world that satisfies its
+preconditions.
+Completion of an Activity establishes new facts.
+An Effect is that established fact becoming observable across a
+Responsibility Boundary.
+The state transition arises from the composition of responsible
+Activities.
+Mutation is an implementation view, not Responsible's primary
+vocabulary.
 ```

@@ -1,10 +1,10 @@
-# Data and Effects Model
+# データと Effect モデル
 
-English | [日本語](data-and-effects.ja.md)
+[English](data-and-effects.md) | 日本語
 
-This note defines how `responsible` treats data, mutation, observation, and effects.
+この文書は、`responsible` がデータ、mutation、observation、effect をどのように扱うかを定義する。
 
-## Core statement
+## 中核となる主張
 
 ```text
 Data does not mutate itself.
@@ -22,15 +22,15 @@ Only Effect crosses Responsibility Boundary.
 
 ## Data
 
-Data is managed information owned by a Responsibility Boundary.
+Data は、Responsibility Boundary が所有する管理された情報である。
 
-Data is not just a value. It has meaning, owner, lifecycle, and visibility.
+Data は単なる値ではない。意味、所有者、ライフサイクル、可視性を持つ。
 
 ```text
 Data = meaning + owner + lifecycle + visibility
 ```
 
-Example:
+例:
 
 ```yaml
 data:
@@ -45,13 +45,13 @@ data:
       - Paid
 ```
 
-Data should be treated as a managed object inside a responsibility boundary, not as an independently flowing thing.
+Data は、独立して流れるものではなく、責任境界の内側で管理されるオブジェクトとして扱うべきである。
 
 ## Activity
 
-An Activity is work performed inside a Responsibility Boundary.
+Activity は、Responsibility Boundary の内側で行われる作業である。
 
-Activities can observe, create, change, derive, publish, receive, delete, or archive data.
+Activity は、データを observe（観測）、create（作成）、change（変更）、derive（派生）、publish（公開）、receive（受領）、delete（削除）、archive（保管）できる。
 
 ```yaml
 activity:
@@ -77,27 +77,27 @@ activity:
     - ApprovedInvoice is observable outside Accounting
 ```
 
-The Activity is the cause. Changes to data are results of the Activity.
+Activity が原因であり、データへの変更はその Activity の結果である。
 
 ## Mutation
 
-A Mutation is a change to data caused by an Activity.
+Mutation は、Activity によって引き起こされるデータへの変更である。
 
-Mutation must not be described as if data changed by itself.
+Mutation は、データが自分自身で変化したかのように記述してはならない。
 
-Bad:
+悪い例:
 
 ```text
 Invoice.status changes from Draft to Approved.
 ```
 
-Good:
+良い例:
 
 ```text
 ApproveInvoice changes Invoice.status from Draft to Approved.
 ```
 
-A mutation should always have an Activity as its cause.
+Mutation には、常にその原因となる Activity がなければならない。
 
 ```yaml
 mutation:
@@ -109,16 +109,16 @@ mutation:
 
 ## Effect
 
-An Effect is the result of an Activity becoming observable across a Responsibility Boundary.
+Effect は、Activity の結果が Responsibility Boundary を越えて観測可能になったものである。
 
-Mutation and Effect are different.
+Mutation と Effect は異なる。
 
 ```text
 Mutation = internal data change
 Effect   = observable result across a boundary
 ```
 
-Example:
+例:
 
 ```yaml
 effects:
@@ -127,19 +127,19 @@ effects:
   - BillingRecord is published to ExternalSystem
 ```
 
-Effect is relative to the selected boundary.
+Effect は、選択された境界に対して相対的である。
 
-The same event may be internal mutation at one zoom level and external effect at another zoom level.
+同じ出来事でも、あるズームレベルでは内部の mutation であり、別のズームレベルでは外部への effect になり得る。
 
 ## Observe, Read, Reference
 
-`read` is a concrete implementation-level form of `observe`.
+`read` は `observe` の、実装レベルで具体化された形である。
 
 ```text
 read ⊂ observe
 ```
 
-`observe` means that an Activity recognizes the current value, state, or existence of data.
+`observe` は、Activity がデータの現在の値、状態、あるいは存在を認識することを意味する。
 
 ```yaml
 observes:
@@ -148,7 +148,7 @@ observes:
   - Customer.creditStatus
 ```
 
-`reference` is different from observe. It means the Activity points to a concept, rule, document, data type, or responsibility, without necessarily reading a current value.
+`reference` は observe とは異なる。それは、Activity が現在の値を読むことなく、概念、規則、文書、データ型、あるいは責任を指し示すことを意味する。
 
 ```yaml
 refersTo:
@@ -157,13 +157,13 @@ refersTo:
   - CustomerContract
 ```
 
-Use `observes` for business-level notation. Project it to `reads` in implementation-level notation.
+業務レベルの記法では `observes` を使う。実装レベルの記法では、それを `reads` へ投影する。
 
-## requires and ensures
+## requires と ensures
 
-`requires` describes what must already be true for an Activity to be valid.
+`requires` は、Activity が有効であるために、すでに成立していなければならない条件を記述する。
 
-Japanese equivalents:
+日本語での対応語:
 
 ```text
 前提
@@ -172,9 +172,9 @@ Japanese equivalents:
 成立条件
 ```
 
-`ensures` describes what is guaranteed after an Activity completes successfully.
+`ensures` は、Activity が正常に完了した後に保証される内容を記述する。
 
-Japanese equivalents:
+日本語での対応語:
 
 ```text
 事後保証
@@ -182,11 +182,11 @@ Japanese equivalents:
 成立後に保証される状態
 ```
 
-## Data actions
+## データへの操作
 
-Minimum vocabulary for how Activities act on Data:
+Activity がデータに対して行う操作の最小語彙:
 
-| Action  | Meaning                                               |
+| 操作    | 意味                                                   |
 | ------- | ----------------------------------------------------- |
 | Observe | 観測する。Activity が判断材料として Data を認識する。 |
 | Create  | 作成する。                                            |
@@ -197,19 +197,19 @@ Minimum vocabulary for how Activities act on Data:
 | Receive | 受領する。境界の外から入ってきたものを受け取る。      |
 | Archive | 保管する。                                            |
 
-## State transition
+## 状態遷移
 
-State Transition is not the primary subject.
+State Transition（状態遷移）は主題ではない。
 
-It is described as a sequence of Activities.
+それは Activity の並びとして記述される。
 
 ```text
 Draft --ApproveInvoice--> Approved --SendInvoice--> Sent --ReceivePayment--> Paid
 ```
 
-The Activity is the cause. The state transition is the result.
+Activity が原因であり、状態遷移はその結果である。
 
-## Design principles
+## 設計原則
 
 ```text
 Activity is the unit of responsibility.

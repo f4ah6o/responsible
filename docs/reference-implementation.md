@@ -1,5 +1,7 @@
 # Reference implementation policy
 
+English | [日本語](reference-implementation.ja.md)
+
 The implementation in this repository is a reference implementation, not the only runtime.
 
 The reference implementation is centered on a single-screen, node-based **business process viewer** that renders `ProcessView`: Activity nodes, responsibility-boundary Lanes, cross-boundary connections, and viewport pan / zoom. The pure projection core that produces `ProcessView` stays small enough to inspect, port, and replace.
