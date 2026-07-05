@@ -6,16 +6,16 @@
 
 ## 実装上の役割
 
-| 理論ファミリ                                 | `responsible` における役割                                                                                                                                                             | v0 か将来か                       |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| カテゴリー理論                               | Activity の合成と projection を、合成的な構造として支える。`seq` は別の Activity を返し、boundary projection は可能な限り構造を保存する view である。                                    | v0 の概念、将来の形式化            |
-| Design by Contract                            | `requires`、`ensures`、そしてレビュー可能な不変条件に、実行時の意味を与える。                                                                                                              | v0 の実行時チェック                |
-| Hoare Logic                                   | `ensures_A => requires_B` のような pre/post condition の連鎖を証明するための目標となる意味論を与える。                                                                                    | 将来の静的検証                     |
-| Process algebra / LTS                         | RBNF のための hiding、observable action、`tau`、weak bisimulation、quotient の語彙を提供する。                                                                                            | v0 の説明、将来のグラフ検証        |
-| DDD / Bounded Context                         | Responsibility Boundary をモデルおよび言語の境界として説明する助けになるが、Responsibility Boundary は Bounded Context と同一ではない。組織・役割・システム・複合的な境界軸も表現できる。 | v0 の説明                          |
-| BPMN / RACI / swimlane                        | コミュニケーションと可視化の層である。view と責任割り当てを読者が理解する助けになるが、セマンティックコアではない。                                                                       | 下流の view 層                     |
-| Petri Net / Workflow Net                      | v0 の線形 projection の先にある、到達可能性、健全性、分岐、合流、並列ワークフロー検証のための候補となる基盤。                                                                             | 将来の検証                         |
-| Abstract Interpretation / Galois connection   | lossy な projection、抽象化、concretization の限界、view の一貫性のための候補となる基盤。                                                                                                | 将来の形式化                       |
+| 理論ファミリ                                | `responsible` における役割                                                                                                                                                                | v0 か将来か                 |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| カテゴリー理論                              | Activity の合成と projection を、合成的な構造として支える。`seq` は別の Activity を返し、boundary projection は可能な限り構造を保存する view である。                                     | v0 の概念、将来の形式化     |
+| Design by Contract                          | `requires`、`ensures`、そしてレビュー可能な不変条件に、実行時の意味を与える。                                                                                                             | v0 の実行時チェック         |
+| Hoare Logic                                 | `ensures_A => requires_B` のような pre/post condition の連鎖を証明するための目標となる意味論を与える。                                                                                    | 将来の静的検証              |
+| Process algebra / LTS                       | RBNF のための hiding、observable action、`tau`、weak bisimulation、quotient の語彙を提供する。                                                                                            | v0 の説明、将来のグラフ検証 |
+| DDD / Bounded Context                       | Responsibility Boundary をモデルおよび言語の境界として説明する助けになるが、Responsibility Boundary は Bounded Context と同一ではない。組織・役割・システム・複合的な境界軸も表現できる。 | v0 の説明                   |
+| BPMN / RACI / swimlane                      | コミュニケーションと可視化の層である。view と責任割り当てを読者が理解する助けになるが、セマンティックコアではない。                                                                       | 下流の view 層              |
+| Petri Net / Workflow Net                    | v0 の線形 projection の先にある、到達可能性、健全性、分岐、合流、並列ワークフロー検証のための候補となる基盤。                                                                             | 将来の検証                  |
+| Abstract Interpretation / Galois connection | lossy な projection、抽象化、concretization の限界、view の一貫性のための候補となる基盤。                                                                                                 | 将来の形式化                |
 
 ## 支持される判断
 
