@@ -15,6 +15,7 @@ import {
   isHierarchicalBoundary,
   isResponsibilityBoundaryNormalForm,
   projectByResponsibilityBoundary,
+  projectDagByResponsibilityBoundary,
   zoomLevelIndexOf,
   zoomIn,
   zoomOut,
@@ -201,7 +202,7 @@ test("zooming one step down expands a collapsed run: company has 1 node, departm
   assert.equal(projectedBoundarySequence("section").length, 7);
 });
 
-test("every sample is v0-linear and collapses to one node at company while expanding at department", () => {
+test("every sample projects at every level and collapses to one node at company while expanding at department", () => {
   for (const sample of sampleProcesses) {
     const leaves = leafIdsUnder(sample.model, sample.rootActivityId);
     const scoped = scopedProcessModel(sample.model, leaves);
@@ -213,7 +214,7 @@ test("every sample is v0-linear and collapses to one node at company while expan
         boundary,
         normalForm: "responsibilityBoundary",
       };
-      const projected = projectByResponsibilityBoundary(scoped, view);
+      const projected = projectDagByResponsibilityBoundary(scoped, view);
       assert.equal(
         projected.activities.length <= leaves.length,
         true,
@@ -224,6 +225,23 @@ test("every sample is v0-linear and collapses to one node at company while expan
         true,
         `${sample.id}: RBNF broken at level ${boundary}`,
       );
+
+      // Linear samples must project identically under the v0 linear projector
+      // and the DAG quotient projector; nonlinear samples must be rejected by
+      // the v0 linear projector.
+      if (sample.id === "estimate_approval") {
+        assert.throws(
+          () => projectByResponsibilityBoundary(scoped, view),
+          /linear/,
+          `${sample.id}: the v0 linear projector must reject branching flows`,
+        );
+      } else {
+        assert.deepEqual(
+          projectByResponsibilityBoundary(scoped, view),
+          projected,
+          `${sample.id}: linear and quotient projections must agree at level ${boundary}`,
+        );
+      }
     }
 
     const companyView: ViewDef = {
@@ -239,12 +257,12 @@ test("every sample is v0-linear and collapses to one node at company while expan
       normalForm: "responsibilityBoundary",
     };
     assert.equal(
-      projectByResponsibilityBoundary(scoped, companyView).activities.length,
+      projectDagByResponsibilityBoundary(scoped, companyView).activities.length,
       1,
       `${sample.id}: company should collapse to a single node`,
     );
     assert.ok(
-      projectByResponsibilityBoundary(scoped, departmentView).activities.length > 1,
+      projectDagByResponsibilityBoundary(scoped, departmentView).activities.length > 1,
       `${sample.id}: department should expand to multiple nodes`,
     );
   }

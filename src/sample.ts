@@ -701,6 +701,103 @@ const aiAgentExecution: ProcessModel = {
   views: HIERARCHICAL_VIEWS,
 };
 
+// 見積承認: 見積ドラフトが技術審査と法務審査に分岐し、承認で合流する DAG。
+// v0 の線形射影では扱えず、graph quotient projection（分岐・合流対応）の
+// デモとして機能する。部門ズームでは承認〜契約送付が営業部内で合成される一方、
+// 冒頭の見積作成（営業部）とは同一境界でも連結しないため別ノードのまま残る。
+const estimateApproval: ProcessModel = {
+  schemaVersion: "responsible.v0",
+  activities: {
+    estimate_approval: {
+      id: "estimate_approval",
+      name: "見積承認",
+      input: "引合",
+      output: "送付済み契約",
+      status: "defined",
+      children: ["draft_estimate", "technical_review", "legal_review", "approve", "send_contract"],
+      responsibility: { company: "つばさ製作所" },
+    },
+    draft_estimate: {
+      id: "draft_estimate",
+      name: "見積を作成する",
+      input: "引合",
+      output: "見積ドラフト",
+      status: "defined",
+      responsibility: {
+        company: "つばさ製作所",
+        department: "営業部",
+        section: "営業一課",
+        team: "見積チーム",
+        person: "山田",
+      },
+    },
+    technical_review: {
+      id: "technical_review",
+      name: "技術審査する",
+      input: "見積ドラフト",
+      output: "技術審査結果",
+      status: "defined",
+      responsibility: {
+        company: "つばさ製作所",
+        department: "技術部",
+        section: "審査課",
+        team: "技術審査チーム",
+        person: "李",
+      },
+    },
+    legal_review: {
+      id: "legal_review",
+      name: "法務審査する",
+      input: "見積ドラフト",
+      output: "法務審査結果",
+      status: "defined",
+      responsibility: {
+        company: "つばさ製作所",
+        department: "管理部",
+        section: "法務課",
+        team: "契約チーム",
+        person: "中村",
+      },
+    },
+    approve: {
+      id: "approve",
+      name: "承認する",
+      input: "審査結果一式",
+      output: "承認済み見積",
+      status: "defined",
+      responsibility: {
+        company: "つばさ製作所",
+        department: "営業部",
+        section: "営業推進課",
+        team: "承認チーム",
+        person: "佐々木",
+      },
+    },
+    send_contract: {
+      id: "send_contract",
+      name: "契約書を送付する",
+      input: "承認済み見積",
+      output: "送付済み契約",
+      status: "defined",
+      responsibility: {
+        company: "つばさ製作所",
+        department: "営業部",
+        section: "営業推進課",
+        team: "承認チーム",
+        person: "佐々木",
+      },
+    },
+  },
+  flows: [
+    { from: "draft_estimate", to: "technical_review", contract: "見積ドラフトを技術審査できる" },
+    { from: "draft_estimate", to: "legal_review", contract: "見積ドラフトを法務審査できる" },
+    { from: "technical_review", to: "approve", contract: "技術審査結果で承認判断できる" },
+    { from: "legal_review", to: "approve", contract: "法務審査結果で承認判断できる" },
+    { from: "approve", to: "send_contract", contract: "承認済み見積で契約書を送付できる" },
+  ],
+  views: HIERARCHICAL_VIEWS,
+};
+
 export const sampleProcesses: readonly SampleProcess[] = [
   {
     id: "software_development",
@@ -719,6 +816,12 @@ export const sampleProcesses: readonly SampleProcess[] = [
     title: "AIエージェント実行",
     rootActivityId: "ai_agent_execution",
     model: aiAgentExecution,
+  },
+  {
+    id: "estimate_approval",
+    title: "見積承認（分岐・合流）",
+    rootActivityId: "estimate_approval",
+    model: estimateApproval,
   },
 ];
 

@@ -33,13 +33,15 @@ export type FlowCanvasProps = {
   edges: Edge[];
   onNodeClick: (nodeId: string) => void;
   toolbar?: React.ReactNode;
+  overlay?: React.ReactNode;
 };
 
-export function FlowCanvas({ nodes, edges, onNodeClick, toolbar }: FlowCanvasProps) {
+export function FlowCanvas({ nodes, edges, onNodeClick, toolbar, overlay }: FlowCanvasProps) {
   return (
     <div className="flow-canvas">
       {toolbar && <div className="flow-toolbar">{toolbar}</div>}
       <div className="flow-body">
+        {overlay && <div className="flow-overlay">{overlay}</div>}
         <ReactFlow
           nodes={nodes}
           edges={edges}

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import type { Node, NodeProps } from "@xyflow/react";
+import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
 import type { ActivityNodeData } from "./projectionToFlow";
 import { useHeightReporter } from "./HeightReportContext";
@@ -45,6 +45,8 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
       className={`activity-card${selected ? " is-selected" : ""}`}
       data-kind={activity.kind}
     >
+      <Handle type="target" position={Position.Left} isConnectable={false} />
+      <Handle type="source" position={Position.Right} isConnectable={false} />
       <div className="activity-card-head">
         <span className="activity-kind">{kindLabel}</span>
         <strong className="activity-title">{title}</strong>

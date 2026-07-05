@@ -4,6 +4,14 @@
 
 ### Added
 
+- Add a dependency-free model validation module (`src/validate.ts`): `validateProcessModel` (structural shape, referential integrity of flows / children, decomposition-cycle detection, JSON-path issue reporting), `parseProcessModelJson`, `inferRootActivityId`, and `ensureRootActivity` (synthetic-root wrapping for flat models), all exported from the core with `node:test` coverage.
+- Add viewer JSON model import (`src/viewer/ModelLoader.tsx`): load a `responsible.v0` JSON file from the toolbar; imported processes join the process selector and share boundary zoom / drill-down / URL state. Validation issues are shown with JSON paths, and a bundled example is provided at `examples/order-fulfillment.json`.
+- Sync viewer state (process, boundary zoom level, decomposition scope path) to the URL hash (`src/viewer/urlState.ts`) so views are shareable and restored on reload.
+- Add crash resilience: a top-level React `ErrorBoundary` with a reload action, and in-place error panels for projection limits so the viewer never blank-screens.
+- Implement nonlinear graph quotient projection (`projectDagByResponsibilityBoundary` in `src/quotient.ts`) per `docs/nonlinear-projection.md`: branching and merging over DAGs, weak-connectivity partitioning of same-boundary components, deduplicated cross-component flows, product-style entry/exit type composition, and explicit rejection of cycles and disconnected scopes. Linear flows remain a byte-identical special case of the retained v0 linear projector, covered by a `node:test` suite including `INV-7` / `INV-8` scenarios.
+- Add a fourth sample process `見積承認（分岐・合流）` exercising branch and merge at every boundary zoom level, and switch the viewer to the DAG projector.
+- Render cross-boundary flow edges in the viewer: activity nodes now carry React Flow connection handles (edges previously could not attach to the custom nodes and were silently dropped).
+
 - Add runtime dependencies `react`, `react-dom`, `@xyflow/react` for the reference process viewer; the pure projection core stays dependency-free. (`issues/polished/20260625-rebuild-process-viewer.md`)
 - Document the semantic core theory, Activity effect model, RBNF definition, and v0 / future verification boundaries. (`issues/done/20260624-document-semantic-core.md`)
 - Add a semantic core vocabulary type layer (`BoundaryId`, `ActivityId`, `SchemaRef`, `Projection`, `RBNF`, opaque `RequiresRef` / `EnsuresRef`), a plain-data `Effect` type, directed-effect boundary validation helpers (`validateDirectedEffect`, `knownBoundaryIds`), and leaf-scope derivation (`leafActivityIds`) to the reference implementation core, keeping runtime dependencies at zero. (`issues/polished/20260624-align-reference-impl-semantic-core.md`)
@@ -15,6 +23,8 @@
 
 ### Changed
 
+- Pin dev dependency ranges (`@types/node`, `typescript`, `vite-plus`) instead of `latest` for reproducible installs; bump package version to `0.1.0`.
+- Document quickstart commands, model import, URL sharing, and the validation API in `README.md`; document the validation layer and viewer import in `docs/reference-implementation.md`.
 - Rebuild the reference implementation around a single-screen, node-based business process viewer (React Flow) that consumes `ProcessView` (Activity nodes, responsibility-boundary Lanes, cross-boundary connections, viewport pan / zoom); keep the responsibility-boundary zoom from `af1611c` as a separate control. (`issues/polished/20260625-rebuild-process-viewer.md`)
 - Replace the construction-company sample with three construction-independent process samples (software development / document publishing / AI agent execution) and update `boundary-zoom` test expectations accordingly. (`issues/polished/20260625-rebuild-process-viewer.md`)
 - Revise `docs/reference-implementation.md` (reference-implementation definition and Dependency policy) and README to center the reference implementation on the viewer, allow visualization-library dependencies in the reference implementation, and distinguish boundary zoom from viewport pan / zoom. (`issues/polished/20260625-rebuild-process-viewer.md`)
