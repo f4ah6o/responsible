@@ -23,6 +23,9 @@ export type ActivityNodeData = {
   effects: readonly Effect[];
   /** Per-member detail for composite nodes, so a fold can be expanded in place. */
   members: readonly MemberInfo[];
+  /** Horizontal room the card may use when expanded, so the member fold can
+   * spread into columns without hitting the next card in the lane. */
+  expandMaxWidth: number;
 };
 
 export type FlowLane = {
@@ -118,10 +121,13 @@ export function projectionToFlow(
         names: activityNames(activity, activities),
         effects: effects?.filter((effect) => sourceIds.includes(effect.source.activityId)) ?? [],
         members: membersOf(activity, activities, effects),
+        expandMaxWidth: layout?.maxWidth ?? NODE_WIDTH,
       } satisfies ActivityNodeData,
       ...(parentId !== undefined ? { parentId, extent: "parent" as const } : {}),
       className: `activity-node${selected ? " is-selected" : ""}`,
-      width: NODE_WIDTH,
+      // initialWidth (not width) so the node wrapper tracks the card when an
+      // expanded fold widens it, keeping edge anchors on the real right edge.
+      initialWidth: NODE_WIDTH,
       selected,
       draggable: false,
       selectable: false,

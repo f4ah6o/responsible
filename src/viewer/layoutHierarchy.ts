@@ -15,6 +15,9 @@ export type ActivityLayout = {
   x: number;
   y: number;
   localIndex: number;
+  /** Horizontal room the card may grow into when expanded, up to the next
+   * card in the same lane (or the lane's right edge). */
+  maxWidth: number;
 };
 
 export type HierarchyLayout = {
@@ -28,6 +31,8 @@ const LANE_PADDING_BOTTOM = 12;
 const HORIZONTAL_STEP = 220;
 const LEFT_PAD = 16;
 const RIGHT_PAD = 48;
+const CARD_WIDTH = 180;
+const EXPAND_GAP = 24;
 
 // Card height fallback for nodes not yet measured by ResizeObserver (first
 // paint only) — once a measurement arrives it always wins, so lanes track the
@@ -148,13 +153,24 @@ function placeLane(
 
   if (lane.children.length === 0) {
     // Leaf lane: position each activity by global flowIndex so x-axis = flow order
+    const laneFlowIndices = lane.activities
+      .map((activity, localIndex) => activityFlowIndex.get(activity.id) ?? localIndex)
+      .sort((a, b) => a - b);
     lane.activities.forEach((activity, localIndex) => {
       const fi = activityFlowIndex.get(activity.id) ?? localIndex;
+      const x = LEFT_PAD + fi * HORIZONTAL_STEP;
+      // Room to grow sideways: up to the next card in this lane, else the lane edge.
+      const nextFi = laneFlowIndices.find((candidate) => candidate > fi);
+      const rightEdge =
+        nextFi !== undefined
+          ? LEFT_PAD + nextFi * HORIZONTAL_STEP - EXPAND_GAP
+          : canvasWidth - RIGHT_PAD;
       activityLayouts.set(activity.id, {
         parentId: lane.id,
-        x: LEFT_PAD + fi * HORIZONTAL_STEP,
+        x,
         y: LANE_HEADER_HEIGHT,
         localIndex,
+        maxWidth: Math.max(CARD_WIDTH, rightEdge - x),
       });
     });
   } else {
