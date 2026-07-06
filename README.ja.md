@@ -115,16 +115,21 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 
 正式な型定義は [`src/model.ts`](src/model.ts)、構造検証は [`src/validate.ts`](src/validate.ts) にある。完全な動作例は [`examples/order-fulfillment.json`](examples/order-fulfillment.json) を参照。
 
+### `responsible.v1`(契約と作用)
+
+`responsible.v1` は v0 に、Activity 上のオプショナルな宣言的フィールドを追加する: `requires` / `ensures`(不透明な事実参照)と `effects`(観測可能な payload と境界横断の配送規則 — `directed` / `broadcast` / `observable`)。v1 は v0 の厳密な上位集合であり、検証は両バージョンを受け入れ、`migrateProcessModelToV1` は `schemaVersion` の書き換えだけで v0 文書を移行する。規範設計と段階的計画は [`docs/responsible-v1.md`](docs/responsible-v1.md) にあり、effect の射影と viewer 描画は後続 Stage(`issues/open/`)である。
+
 ## ドキュメント
 
-| ドキュメント                                                                                                    | 内容                                                                             |
-| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **規範的（normative）** な意味論: Activity、責任境界、Projection、RBNF、不変条件 |
-| [`docs/theory.md`](docs/theory.md)                                                                              | 理論的背景と、理論から実装への対応付け                                           |
-| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | リファレンス実装のスコープと依存ポリシー                                         |
-| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | DAG graph quotient projection の設計                                             |
-| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                 |
-| [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                               |
+| ドキュメント                                                                                                    | 内容                                                                               |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **規範的（normative）** な意味論: Activity、責任境界、Projection、RBNF、不変条件   |
+| [`docs/theory.md`](docs/theory.md)                                                                              | 理論的背景と、理論から実装への対応付け                                             |
+| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | リファレンス実装のスコープと依存ポリシー                                           |
+| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | DAG graph quotient projection の設計                                               |
+| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **規範的（normative）** な `responsible.v1` スキーマ設計（契約と作用）と段階的計画 |
+| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                   |
+| [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                 |
 
 ## アーキテクチャ
 

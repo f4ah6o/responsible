@@ -4,6 +4,8 @@
 
 ### Added
 
+- Define the `responsible.v1` schema — declarative `requires` / `ensures` (opaque fact references) and `effects` (payload + boundary-crossing delivery rule) on Activities — as a normative document with a staged implementation plan (`docs/responsible-v1.md`, ja pair), plus follow-up issues for effect projection and viewer rendering (`issues/open/`).
+- Implement the v1 schema core (stage 1): `FactRef` / `EffectDef` model types, dual-version (`responsible.v0` / `responsible.v1`) structural validation with JSON-path issues and a version hint when v1 fields appear in v0 documents, and `migrateProcessModelToV1` (v0 is a strict subset; the migration rewrites `schemaVersion` only), with `node:test` coverage. (`issues/done/20260706-implement-v1-schema-core.md`)
 - Add a dependency-free model validation module (`src/validate.ts`): `validateProcessModel` (structural shape, referential integrity of flows / children, decomposition-cycle detection, JSON-path issue reporting), `parseProcessModelJson`, `inferRootActivityId`, and `ensureRootActivity` (synthetic-root wrapping for flat models), all exported from the core with `node:test` coverage.
 - Add viewer JSON model import (`src/viewer/ModelLoader.tsx`): load a `responsible.v0` JSON file from the toolbar; imported processes join the process selector and share boundary zoom / drill-down / URL state. Validation issues are shown with JSON paths, and a bundled example is provided at `examples/order-fulfillment.json`.
 - Sync viewer state (process, boundary zoom level, decomposition scope path) to the URL hash (`src/viewer/urlState.ts`) so views are shareable and restored on reload.

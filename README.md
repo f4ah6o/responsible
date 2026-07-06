@@ -115,6 +115,10 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 
 The authoritative definitions live in [`src/model.ts`](src/model.ts), and structural validation in [`src/validate.ts`](src/validate.ts). See [`examples/order-fulfillment.json`](examples/order-fulfillment.json) for a complete working model.
 
+### `responsible.v1` (contracts and effects)
+
+`responsible.v1` extends v0 with optional declarative fields on Activities: `requires` / `ensures` (opaque fact references) and `effects` (an observable payload plus a boundary-crossing delivery rule — `directed` / `broadcast` / `observable`). v1 is a strict superset of v0: validation accepts both versions, and `migrateProcessModelToV1` upgrades a v0 document by rewriting `schemaVersion` alone. The normative design and staged plan live in [`docs/responsible-v1.md`](docs/responsible-v1.md); effect projection and viewer rendering are staged follow-ups (`issues/open/`).
+
 ## Documentation
 
 | Document                                                                                                        | Contents                                                                                      |
@@ -123,6 +127,7 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 | [`docs/theory.md`](docs/theory.md)                                                                              | Theoretical background and how theory maps onto the implementation                            |
 | [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | Scope and dependency policy of the reference implementation                                   |
 | [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | Design of the DAG graph quotient projection                                                   |
+| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **Normative** `responsible.v1` schema design (contracts and effects) and staged plan          |
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                              |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                           |
 
