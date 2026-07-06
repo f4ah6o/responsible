@@ -22,7 +22,7 @@ import type {
   ViewDef,
 } from "../model.js";
 import { sampleProcesses, type SampleProcess } from "../sample.js";
-import { BoundaryZoomControl, type HeightMode } from "./BoundaryZoomControl";
+import { BoundaryZoomControl } from "./BoundaryZoomControl";
 import { FlowCanvas } from "./FlowCanvas";
 import { HeightReportContext } from "./HeightReportContext";
 import { ModelLoader } from "./ModelLoader";
@@ -31,7 +31,6 @@ import { projectionToFlow } from "./projectionToFlow";
 import { readViewerUrlState, writeViewerUrlState } from "./urlState";
 
 const DEFAULT_ZOOM_LEVEL = 1;
-const noop = () => {};
 
 function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
   return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
@@ -163,7 +162,8 @@ export function ProcessViewer() {
   );
   const [scopeError, setScopeError] = useState<string | undefined>();
   const [importError, setImportError] = useState<string | undefined>();
-  const [heightMode, setHeightMode] = useState<HeightMode>("estimated");
+  // Lane heights always come from measured card heights (ResizeObserver), so an
+  // expanded composite card grows its lane instead of overflowing the frame.
   const [measuredHeights, setMeasuredHeights] = useState<ReadonlyMap<string, number>>(new Map());
   const pendingHeights = useRef<Map<string, number>>(new Map());
   const [selectedLeafId, setSelectedLeafId] = useState<Id | undefined>(() =>
@@ -205,7 +205,6 @@ export function ProcessViewer() {
   const effectIssues = effectProjection.ok ? undefined : effectProjection.issues;
 
   const projected = projection.view;
-  const activeHeights = heightMode === "measured" ? measuredHeights : undefined;
 
   const flow = useMemo(
     () =>
@@ -215,11 +214,11 @@ export function ProcessViewer() {
             model.activities,
             selectedLeafId,
             zoomLevel,
-            activeHeights,
+            measuredHeights,
             effects,
           )
         : { nodes: [], edges: [], lanes: [] },
-    [projected, model, selectedLeafId, zoomLevel, activeHeights, effects],
+    [projected, model, selectedLeafId, zoomLevel, measuredHeights, effects],
   );
 
   const scopeKey = validScopePath.join(",");
@@ -249,10 +248,6 @@ export function ProcessViewer() {
         return next;
       });
     });
-  }, []);
-
-  const handleToggleHeightMode = useCallback(() => {
-    setHeightMode((m) => (m === "estimated" ? "measured" : "estimated"));
   }, []);
 
   const handleNodeClick = useCallback(
@@ -366,7 +361,7 @@ export function ProcessViewer() {
   }, [resetHeights]);
 
   return (
-    <HeightReportContext.Provider value={heightMode === "measured" ? handleHeightMeasured : noop}>
+    <HeightReportContext.Provider value={handleHeightMeasured}>
       <main className="shell">
         <FlowCanvas
           nodes={flow.nodes}
@@ -405,8 +400,6 @@ export function ProcessViewer() {
                 level={zoomLevel}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
-                heightMode={heightMode}
-                onToggleHeightMode={handleToggleHeightMode}
               />
               <ScopeControl
                 model={model}

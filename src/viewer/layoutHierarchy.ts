@@ -29,7 +29,9 @@ const HORIZONTAL_STEP = 220;
 const LEFT_PAD = 16;
 const RIGHT_PAD = 48;
 
-// Card height estimation
+// Card height fallback for nodes not yet measured by ResizeObserver (first
+// paint only) — once a measurement arrives it always wins, so lanes track the
+// real rendered height, including expanded composite folds.
 const CARD_PADDING_V = 20;
 const CARD_GAP_TOTAL = 12;
 const CARD_FIXED_LINES_HEIGHT = 54;
