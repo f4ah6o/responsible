@@ -7,11 +7,22 @@ import { buildLaneHierarchy, laneIdForBoundary } from "./buildLaneHierarchy.js";
 import { layoutHierarchy } from "./layoutHierarchy.js";
 export type { LaneNodeData } from "./layoutHierarchy.js";
 
+export type MemberInfo = {
+  id: Id;
+  name: string;
+  input: string;
+  output: string;
+  responsibilityPath: string;
+  effects: readonly Effect[];
+};
+
 export type ActivityNodeData = {
   activity: ProjectedActivity;
   flowIndex: number;
   names: readonly string[];
   effects: readonly Effect[];
+  /** Per-member detail for composite nodes, so a fold can be expanded in place. */
+  members: readonly MemberInfo[];
 };
 
 export type FlowLane = {
@@ -37,6 +48,36 @@ function activityNames(
   activities: Readonly<Record<Id, ActivityDef>>,
 ): readonly string[] {
   return sourceIdsOf(activity).map((id) => activities[id]?.name ?? id);
+}
+
+// The hierarchical responsibility path of a member (e.g. "管理部 / 審査課 / 審査チーム / 田中"),
+// so an expanded fold shows why merged Activities are distinct at finer boundaries.
+function responsibilityPath(activity: ActivityDef | undefined): string {
+  const responsibility = activity?.responsibility;
+  if (!responsibility) return "";
+  const values = HIERARCHICAL_BOUNDARY_ORDER.map((key) => responsibility[key]).filter(
+    (value): value is string | number | boolean => value !== undefined && value !== null,
+  );
+  return values.map(String).join(" / ");
+}
+
+function membersOf(
+  activity: ProjectedActivity,
+  activities: Readonly<Record<Id, ActivityDef>>,
+  effects: readonly Effect[] | undefined,
+): readonly MemberInfo[] {
+  if (activity.kind === "atomic") return [];
+  return activity.activityIds.map((id) => {
+    const def = activities[id];
+    return {
+      id,
+      name: def?.name ?? id,
+      input: def?.input ?? "",
+      output: def?.output ?? "",
+      responsibilityPath: responsibilityPath(def),
+      effects: effects?.filter((effect) => effect.source.activityId === id) ?? [],
+    } satisfies MemberInfo;
+  });
 }
 
 export function projectionToFlow(
@@ -76,6 +117,7 @@ export function projectionToFlow(
         flowIndex,
         names: activityNames(activity, activities),
         effects: effects?.filter((effect) => sourceIds.includes(effect.source.activityId)) ?? [],
+        members: membersOf(activity, activities, effects),
       } satisfies ActivityNodeData,
       ...(parentId !== undefined ? { parentId, extent: "parent" as const } : {}),
       className: `activity-node${selected ? " is-selected" : ""}`,
@@ -133,7 +175,9 @@ function effectEdges(
     edges.push({
       id,
       source: sourceNodeId,
+      sourceHandle: "effect",
       target: laneId,
+      type: "smoothstep",
       label: effect.payload.schema,
       markerEnd: { type: MarkerType.Arrow },
       className: "edge-effect",
