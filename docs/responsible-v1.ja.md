@@ -100,16 +100,16 @@ type ActivityDef = {
 
 ## Effect の射影（Stage 2）
 
-モデル・境界式・ドリルダウンスコープから意味論上の `Effect` 値を生成する読み取り専用のコア関数を追加する:
+`src/effects.ts` の `projectEffects` として実装済みであり、`src/__tests__/effects.test.ts` で検証されている。モデル・境界式・ドリルダウンスコープから意味論上の `Effect` 値を生成する読み取り専用のコア関数である:
 
 ```text
-projectEffects(model, boundary, scopeId?) -> Effect[]
+projectEffects(model, boundary, scopeId?) -> { ok: true; effects: Effect[] } | { ok: false; issues: ValidationIssue[] }
 ```
 
-- スコープ内の各リーフ Activity について、各 `EffectDef` から `Effect` を生成する。`source.boundary` は `boundaryOf(activity, boundary)`、directed の target は宣言された target `Responsibility` に同じ規則を適用して解決する。
+- スコープ内の各リーフ Activity について、各 `EffectDef` から `Effect` を生成する。`source.boundary` は `boundaryOf(activity, boundary)`、directed の target は宣言された target `Responsibility` に同じ規則を適用して解決する（`src/boundary.ts` の `boundaryOfResponsibility`）。
 - **境界横断規則（RBNF と整合）:** 選択された境界において解決後の source と directed target が一致する effect は、そのビューでは内部的（`tau`）であり隠される。これは同一境界フローの collapse と対をなす。broadcast / observable の effect は常に保持される。
-- 宣言された effect について `INV-3` が表明可能になる: 解決後の target が選択ビューの既知の境界でない directed effect は検証エラーである（`validateDirectedEffect` を再利用する）。
-- `ProcessView` は射影済み Activity に紐づくオプショナルな `effects` リストを持ち、ビューは JSON シリアライズ可能なままにする。射影は読み取り専用（`INV-1`）かつ非可逆（`INV-5`）のままである。
+- 宣言された effect について `INV-3` が表明可能である: 解決後の target が選択ビューの既知の境界でない directed effect は JSON パス付きの issue として報告され（`validateDirectedEffect` を再利用）、黙って落とされることはない。
+- **設計判断（実装時に解決）:** effect は独立した JSON シリアライズ可能な戻り値であり、`ProcessView` は変更しない。これにより互換性の原則どおりフロー射影はバージョン非依存のままになる。viewer は `Effect.source.activityId` をコンポーネントの `activityIds` に対応付けて effect をノードに紐づける。射影は読み取り専用（`INV-1`）かつ非可逆（`INV-5`）のままである。
 
 ## Viewer（Stage 3）
 
@@ -130,7 +130,7 @@ projectEffects(model, boundary, scopeId?) -> Effect[]
 | Stage | スコープ                                                                         | Issue                                                       |
 | ----- | -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | 1     | スキーマ型、二重バージョン検証、`migrateProcessModelToV1`、テスト                | `issues/done/20260706-implement-v1-schema-core.md`          |
-| 2     | `projectEffects`、境界横断規則、`INV-3` の表明、`ProcessView.effects`、テスト    | `issues/open/20260706-project-effects-across-boundaries.md` |
+| 2     | `projectEffects`、境界横断規則、`INV-3` の表明、テスト                           | `issues/done/20260706-project-effects-across-boundaries.md` |
 | 3     | viewer の effect 描画、v1 サンプル + example JSON、loader / README / docs の更新 | `issues/open/20260706-render-effects-in-viewer.md`          |
 
 後続 Stage は先行 Stage の受け入れ条件が満たされる前に着手してはならないが、各 Stage は単独でリリース可能である。

@@ -117,7 +117,7 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 
 ### `responsible.v1`(契約と作用)
 
-`responsible.v1` は v0 に、Activity 上のオプショナルな宣言的フィールドを追加する: `requires` / `ensures`(不透明な事実参照)と `effects`(観測可能な payload と境界横断の配送規則 — `directed` / `broadcast` / `observable`)。v1 は v0 の厳密な上位集合であり、検証は両バージョンを受け入れ、`migrateProcessModelToV1` は `schemaVersion` の書き換えだけで v0 文書を移行する。規範設計と段階的計画は [`docs/responsible-v1.md`](docs/responsible-v1.md) にあり、effect の射影と viewer 描画は後続 Stage(`issues/open/`)である。
+`responsible.v1` は v0 に、Activity 上のオプショナルな宣言的フィールドを追加する: `requires` / `ensures`(不透明な事実参照)と `effects`(観測可能な payload と境界横断の配送規則 — `directed` / `broadcast` / `observable`)。v1 は v0 の厳密な上位集合であり、検証は両バージョンを受け入れ、`migrateProcessModelToV1` は `schemaVersion` の書き換えだけで v0 文書を移行する。規範設計と段階的計画は [`docs/responsible-v1.md`](docs/responsible-v1.md) にある。宣言された effect は `projectEffects`(`src/effects.ts`)で選択した境界へ射影される: 選択ビューで単一境界の内部に留まる directed effect は内部的(`tau`)として隠され、未知の directed target は `INV-3` 違反として報告される。viewer での effect 描画は後続 Stage(`issues/open/`)である。
 
 ## ドキュメント
 
@@ -135,14 +135,16 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 
 ```text
 src/
-  model.ts       ProcessModel / ProcessView のデータ型（responsible.v0）
+  model.ts       ProcessModel / ProcessView のデータ型（responsible.v0 / v1）
   validate.ts    構造検証、JSON パース、合成ルートによる包み込み
+  migrate.ts     v0 -> v1 スキーママイグレーション
   boundary.ts    責任境界の解決
   hierarchy.ts   boundary zoom レベル（company … person）
   quotient.ts    DAG graph quotient projection（分岐・合流）
   normalize.ts   Responsibility Boundary Normal Form
   graph.ts       フローグラフのヘルパー
   semantic.ts    セマンティックコアの語彙型、Effect、不変条件ヘルパー
+  effects.ts     宣言された v1 effect の境界への射影（projectEffects）
   viewer/        React + React Flow リファレンスビューア
   __tests__/     node:test スイート（不変条件、射影、ズーム、検証）
 ```

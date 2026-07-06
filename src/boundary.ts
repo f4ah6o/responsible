@@ -1,20 +1,40 @@
-import type { ActivityDef, BoundaryExpr, BoundaryValue } from "./model.js";
+import type { ActivityDef, BoundaryExpr, BoundaryValue, Responsibility } from "./model.js";
 
 export function boundaryOf(activity: ActivityDef, boundary: BoundaryExpr): string {
+  return boundaryOfResponsibility(activity.responsibility, boundary);
+}
+
+/**
+ * Resolves a bare `Responsibility` record to a boundary id with the same rule
+ * as Activities. Used for boundary-expression-independent references such as
+ * a directed effect's declared `target` (docs/responsible-v1.md).
+ */
+export function boundaryOfResponsibility(
+  responsibility: Responsibility | undefined,
+  boundary: BoundaryExpr,
+): string {
   if (typeof boundary !== "string") {
     return boundary
-      .map((key) => `${key}:${formatBoundaryValue(resolveBoundaryValue(activity, key))}`)
+      .map(
+        (key) => `${key}:${formatBoundaryValue(resolveResponsibilityValue(responsibility, key))}`,
+      )
       .join("|");
   }
 
-  return formatBoundaryValue(resolveBoundaryValue(activity, boundary));
+  return formatBoundaryValue(resolveResponsibilityValue(responsibility, boundary));
 }
 
 export function resolveBoundaryValue(
   activity: ActivityDef,
   key: string,
 ): BoundaryValue | undefined {
-  const responsibility = activity.responsibility;
+  return resolveResponsibilityValue(activity.responsibility, key);
+}
+
+function resolveResponsibilityValue(
+  responsibility: Responsibility | undefined,
+  key: string,
+): BoundaryValue | undefined {
   if (!responsibility) return undefined;
 
   const parts = key.split(".");

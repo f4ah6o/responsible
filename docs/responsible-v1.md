@@ -100,16 +100,16 @@ Example (the running example of `docs/activity-effects.md`):
 
 ## Effect projection (stage 2)
 
-A new read-only core function instantiates semantic `Effect` values from a model, a boundary expression, and a drill-down scope:
+Implemented in `src/effects.ts` as `projectEffects` and covered by `src/__tests__/effects.test.ts`. A read-only core function instantiates semantic `Effect` values from a model, a boundary expression, and a drill-down scope:
 
 ```text
-projectEffects(model, boundary, scopeId?) -> Effect[]
+projectEffects(model, boundary, scopeId?) -> { ok: true; effects: Effect[] } | { ok: false; issues: ValidationIssue[] }
 ```
 
-- For each leaf Activity in scope, each `EffectDef` yields an `Effect` whose `source.boundary` is `boundaryOf(activity, boundary)` and whose directed target resolves through the same rule applied to the declared target `Responsibility`.
+- For each leaf Activity in scope, each `EffectDef` yields an `Effect` whose `source.boundary` is `boundaryOf(activity, boundary)` and whose directed target resolves through the same rule applied to the declared target `Responsibility` (`boundaryOfResponsibility` in `src/boundary.ts`).
 - **Boundary-crossing rule (RBNF-consistent):** an effect whose resolved source and directed target coincide at the selected boundary is internal (`tau`) at that view and is hidden, mirroring same-boundary flow collapse. Broadcast and observable effects are always retained.
-- `INV-3` becomes assertable for declared effects: a directed effect whose resolved target is not a known boundary at the selected view is a validation error (`validateDirectedEffect` is reused).
-- `ProcessView` gains an optional `effects` list attached to projected activities, so views stay JSON-serializable. Projection stays read-only (`INV-1`) and lossy (`INV-5`).
+- `INV-3` is assertable for declared effects: a directed effect whose resolved target is not a known boundary at the selected view is reported as a JSON-path issue (`validateDirectedEffect` is reused), never silently dropped.
+- **Decision (resolved at implementation):** effects are an independent, JSON-serializable return value; `ProcessView` is unchanged. This keeps flow projection version-agnostic per the compatibility principle. Viewers attach effects to projected nodes by mapping `Effect.source.activityId` into the components' `activityIds`. Projection stays read-only (`INV-1`) and lossy (`INV-5`).
 
 ## Viewer (stage 3)
 
@@ -127,11 +127,11 @@ projectEffects(model, boundary, scopeId?) -> Effect[]
 
 ## Staged plan
 
-| Stage | Scope                                                                                     | Issue                                                       |
-| ----- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| 1     | Schema types, dual-version validation, `migrateProcessModelToV1`, tests                   | `issues/done/20260706-implement-v1-schema-core.md`          |
-| 2     | `projectEffects`, boundary-crossing rule, `INV-3` assertion, `ProcessView.effects`, tests | `issues/open/20260706-project-effects-across-boundaries.md` |
-| 3     | Viewer effect rendering, v1 sample + example JSON, loader/README/docs updates             | `issues/open/20260706-render-effects-in-viewer.md`          |
+| Stage | Scope                                                                         | Issue                                                       |
+| ----- | ----------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 1     | Schema types, dual-version validation, `migrateProcessModelToV1`, tests       | `issues/done/20260706-implement-v1-schema-core.md`          |
+| 2     | `projectEffects`, boundary-crossing rule, `INV-3` assertion, tests            | `issues/done/20260706-project-effects-across-boundaries.md` |
+| 3     | Viewer effect rendering, v1 sample + example JSON, loader/README/docs updates | `issues/open/20260706-render-effects-in-viewer.md`          |
 
 Later stages must not begin before the previous stage's acceptance criteria pass, but each stage is independently shippable.
 

@@ -117,7 +117,7 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 
 ### `responsible.v1` (contracts and effects)
 
-`responsible.v1` extends v0 with optional declarative fields on Activities: `requires` / `ensures` (opaque fact references) and `effects` (an observable payload plus a boundary-crossing delivery rule — `directed` / `broadcast` / `observable`). v1 is a strict superset of v0: validation accepts both versions, and `migrateProcessModelToV1` upgrades a v0 document by rewriting `schemaVersion` alone. The normative design and staged plan live in [`docs/responsible-v1.md`](docs/responsible-v1.md); effect projection and viewer rendering are staged follow-ups (`issues/open/`).
+`responsible.v1` extends v0 with optional declarative fields on Activities: `requires` / `ensures` (opaque fact references) and `effects` (an observable payload plus a boundary-crossing delivery rule — `directed` / `broadcast` / `observable`). v1 is a strict superset of v0: validation accepts both versions, and `migrateProcessModelToV1` upgrades a v0 document by rewriting `schemaVersion` alone. The normative design and staged plan live in [`docs/responsible-v1.md`](docs/responsible-v1.md). Declared effects are projected onto a selected boundary with `projectEffects` (`src/effects.ts`): directed effects that stay inside one boundary at the selected view are hidden as internal (`tau`), and unknown directed targets are reported as `INV-3` violations. Viewer rendering of effects is a staged follow-up (`issues/open/`).
 
 ## Documentation
 
@@ -135,14 +135,16 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 
 ```text
 src/
-  model.ts       ProcessModel / ProcessView data types (responsible.v0)
+  model.ts       ProcessModel / ProcessView data types (responsible.v0 / v1)
   validate.ts    structural validation, JSON parsing, synthetic-root wrapping
+  migrate.ts     v0 -> v1 schema migration
   boundary.ts    responsibility-boundary resolution
   hierarchy.ts   boundary zoom levels (company … person)
   quotient.ts    DAG graph quotient projection (branch / merge)
   normalize.ts   Responsibility Boundary Normal Form
   graph.ts       flow-graph helpers
   semantic.ts    semantic-core vocabulary types, Effect, invariant helpers
+  effects.ts     projection of declared v1 effects onto a boundary (projectEffects)
   viewer/        React + React Flow reference viewer
   __tests__/     node:test suites (invariants, projection, zoom, validation)
 ```

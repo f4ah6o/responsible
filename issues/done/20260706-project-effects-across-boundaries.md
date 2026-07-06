@@ -1,10 +1,10 @@
 # 責任境界を越える Effect の射影を実装する（Stage 2）
 
-Status: open
+Status: done
 Model: Claude
 Created: 2026-07-06
 Updated: 2026-07-06
-Branch: (未着手)
+Branch: claude/responsible-v1-impl-xkq73q
 
 ## 概要
 
@@ -40,10 +40,10 @@ Branch: (未着手)
 
 ## 受け入れ条件
 
-- [ ] `projectEffects` が `docs/responsible-v1.md` の境界横断規則どおりに動作し、テストで表明されている。
-- [ ] 未知の directed target が `INV-3` 違反として報告される。
-- [ ] 射影は入力モデルを変更しない（`INV-1`）。
-- [ ] `pnpm run check && pnpm run typecheck && pnpm test && pnpm run build` が通る。
+- [x] `projectEffects` が `docs/responsible-v1.md` の境界横断規則どおりに動作し、テストで表明されている。
+- [x] 未知の directed target が `INV-3` 違反として報告される。
+- [x] 射影は入力モデルを変更しない（`INV-1`）。
+- [x] `pnpm run check && pnpm run typecheck && pnpm test && pnpm run build` が通る。
 
 ## テスト計画
 
@@ -65,3 +65,4 @@ Branch: (未着手)
 ## 注記
 
 - 規範: `docs/responsible-v1.md` の「Effect の射影（Stage 2）」。着手は Stage 1 の受け入れ条件成立後。
+- 2026-07-06: 実装完了（`src/effects.ts`、`src/__tests__/effects.test.ts`）。方針 4 の判断: effect は `ProcessView` に載せず独立した戻り値とした。フロー射影をバージョン非依存に保つためであり、viewer は `Effect.source.activityId` をコンポーネントの `activityIds` に対応付ける。戻り値は `{ ok, effects | issues }` の Result 形式とし、`INV-3` 違反は JSON パス付き issue で全件報告する。directed target の解決のため `src/boundary.ts` に `boundaryOfResponsibility` を追加した。
