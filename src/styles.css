@@ -418,9 +418,81 @@ button {
   font-size: 0.72rem;
   font-weight: 700;
 }
+.activity-effects {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.effect-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed #c084fc;
+  background: #faf5ff;
+  color: #7e22ce;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.effect-badge[data-mode="broadcast"],
+.effect-badge[data-mode="observable"] {
+  border-style: dotted;
+  border-color: #a5b4fc;
+  background: #eef2ff;
+  color: #4338ca;
+}
+.lane-effect-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+.effect-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.legend-dash {
+  width: 22px;
+  border-top: 2px dashed #a855f7;
+}
+.flow-notice {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 7;
+  max-width: 460px;
+}
+.effect-issues {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  box-shadow: 0 8px 18px rgb(15 23 42 / 10%);
+  font-size: 0.78rem;
+}
+.effect-issues p {
+  margin: 0;
+  color: #92400e;
+  overflow-wrap: anywhere;
+}
 .react-flow__edge.edge-cross-boundary path {
   stroke: #94a3b8;
   stroke-width: 2;
+}
+.react-flow__edge.edge-effect path {
+  stroke: #a855f7;
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+}
+.react-flow__edge.edge-effect .react-flow__edge-text {
+  fill: #7e22ce;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 .react-flow__edge.selected path,
 .react-flow__edge:focus path {

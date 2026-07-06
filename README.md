@@ -35,7 +35,8 @@ One model, written once at the finest granularity you know, produces consistent 
 - **Boundary zoom** — step through `company < department < section < team < person` views of the same model. Distinct from viewport pan/zoom, which never changes the projection.
 - **Hierarchical drill-down** — Activities nest arbitrarily; a parent is the composition of its children. Drill into any decomposition scope independently of boundary zoom.
 - **Interactive viewer** — single-screen React Flow viewer with Activity nodes, responsibility lanes, cross-boundary edges, and nested lane layout.
-- **Bring your own model** — load any `responsible.v0` JSON file from the toolbar. Structural validation reports issues with JSON paths; flat models are automatically wrapped in a synthetic root.
+- **Contracts and effects (`responsible.v1`)** — declare `requires` / `ensures` / `effects` on Activities. Declared effects render as node badges and dashed edges to the target boundary's lane, and hide/appear with boundary zoom under the same rule that collapses same-boundary flows.
+- **Bring your own model** — load any `responsible.v0` / `responsible.v1` JSON file from the toolbar. Structural validation reports issues with JSON paths; flat models are automatically wrapped in a synthetic root.
 - **Shareable URLs** — process, boundary zoom level, and drill-down scope sync to the URL hash, so a link reproduces the exact view.
 - **Crash resilience** — a top-level error boundary and in-place error panels; unsupported models show a message instead of a blank screen.
 
@@ -62,9 +63,9 @@ pnpm run preview    # preview the production build
 
 ## Using the viewer
 
-The viewer ships with bundled sample processes (software development, document publishing, AI agent execution, and a branching/merging estimate approval flow). To view your own process:
+The viewer ships with bundled sample processes (software development, document publishing, AI agent execution, a branching/merging estimate approval flow, and a `responsible.v1` application approval flow with contracts and effects). To view your own process:
 
-1. Write a `responsible.v0` JSON model — start from [`examples/order-fulfillment.json`](examples/order-fulfillment.json), a six-Activity order-to-invoice process.
+1. Write a `responsible.v0` or `responsible.v1` JSON model — start from [`examples/order-fulfillment.json`](examples/order-fulfillment.json) (v0, a six-Activity order-to-invoice process) or [`examples/application-approval.v1.json`](examples/application-approval.v1.json) (v1, with `requires` / `ensures` / `effects`).
 2. Click **“JSON を読み込む”** (Load JSON) in the toolbar.
 3. Use **boundary zoom** to move between organizational levels, **drill-down** to open an Activity's decomposition, and viewport pan/zoom to navigate the canvas.
 4. Share the URL — `#p=…&z=…&s=…` encodes the process, zoom level, and scope (the imported JSON itself is not embedded in the URL).
@@ -117,7 +118,7 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 
 ### `responsible.v1` (contracts and effects)
 
-`responsible.v1` extends v0 with optional declarative fields on Activities: `requires` / `ensures` (opaque fact references) and `effects` (an observable payload plus a boundary-crossing delivery rule — `directed` / `broadcast` / `observable`). v1 is a strict superset of v0: validation accepts both versions, and `migrateProcessModelToV1` upgrades a v0 document by rewriting `schemaVersion` alone. The normative design and staged plan live in [`docs/responsible-v1.md`](docs/responsible-v1.md). Declared effects are projected onto a selected boundary with `projectEffects` (`src/effects.ts`): directed effects that stay inside one boundary at the selected view are hidden as internal (`tau`), and unknown directed targets are reported as `INV-3` violations. Viewer rendering of effects is a staged follow-up (`issues/open/`).
+`responsible.v1` extends v0 with optional declarative fields on Activities: `requires` / `ensures` (opaque fact references) and `effects` (an observable payload plus a boundary-crossing delivery rule — `directed` / `broadcast` / `observable`). v1 is a strict superset of v0: validation accepts both versions, and `migrateProcessModelToV1` upgrades a v0 document by rewriting `schemaVersion` alone. The normative design and staged plan live in [`docs/responsible-v1.md`](docs/responsible-v1.md). Declared effects are projected onto a selected boundary with `projectEffects` (`src/effects.ts`): directed effects that stay inside one boundary at the selected view are hidden as internal (`tau`), and unknown directed targets are reported as `INV-3` violations. The viewer renders observable effects as node badges and dashed cross-lane edges; see the bundled `申請承認（契約と作用）` sample.
 
 ## Documentation
 
@@ -157,7 +158,7 @@ The **projection core** (everything outside `src/viewer/`) is dependency-free. O
 
 ## Project status
 
-Version `0.x` — the API and JSON schema (`responsible.v0`) may change between minor versions. Current v0 implements the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, `Effect` as plain data, DAG projection, and no execution or inverse-projection API. Cycles are rejected until a loop semantics is defined.
+Version `0.x` — the API and JSON schemas (`responsible.v0` / `responsible.v1`) may change between minor versions. The core implements the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, `Effect` as plain data, DAG projection, and — with `responsible.v1` — declared contracts and boundary-projected effects per [`docs/responsible-v1.md`](docs/responsible-v1.md). There is no execution or inverse-projection API, and cycles are rejected until a loop semantics is defined.
 
 Notable changes are tracked in [`CHANGES.md`](CHANGES.md).
 

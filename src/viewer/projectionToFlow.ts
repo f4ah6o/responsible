@@ -1,7 +1,9 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
+import { HIERARCHICAL_BOUNDARY_ORDER } from "../hierarchy.js";
 import type { ActivityDef, Id, ProcessView, ProjectedActivity } from "../model.js";
-import { buildLaneHierarchy } from "./buildLaneHierarchy.js";
+import type { Effect } from "../semantic.js";
+import { buildLaneHierarchy, laneIdForBoundary } from "./buildLaneHierarchy.js";
 import { layoutHierarchy } from "./layoutHierarchy.js";
 export type { LaneNodeData } from "./layoutHierarchy.js";
 
@@ -9,6 +11,7 @@ export type ActivityNodeData = {
   activity: ProjectedActivity;
   flowIndex: number;
   names: readonly string[];
+  effects: readonly Effect[];
 };
 
 export type FlowLane = {
@@ -42,6 +45,7 @@ export function projectionToFlow(
   selectedLeafId: Id | undefined,
   zoomLevel: number,
   measuredHeights?: ReadonlyMap<string, number>,
+  effects?: readonly Effect[],
 ): ProjectionFlow {
   const hierarchy = buildLaneHierarchy(view, activities, zoomLevel);
   const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities, measuredHeights);
@@ -51,6 +55,11 @@ export function projectionToFlow(
     label: (n.data as { label: string }).label,
     index: i,
   }));
+
+  const leafToProjectedId = new Map<Id, Id>();
+  for (const activity of view.activities) {
+    for (const sourceId of sourceIdsOf(activity)) leafToProjectedId.set(sourceId, activity.id);
+  }
 
   const activityNodes: Node[] = view.activities.map((activity, flowIndex) => {
     const layout = activityLayouts.get(activity.id);
@@ -66,6 +75,7 @@ export function projectionToFlow(
         activity,
         flowIndex,
         names: activityNames(activity, activities),
+        effects: effects?.filter((effect) => sourceIds.includes(effect.source.activityId)) ?? [],
       } satisfies ActivityNodeData,
       ...(parentId !== undefined ? { parentId, extent: "parent" as const } : {}),
       className: `activity-node${selected ? " is-selected" : ""}`,
@@ -86,7 +96,49 @@ export function projectionToFlow(
 
   return {
     nodes: [...laneNodes, ...activityNodes],
-    edges,
+    edges: [...edges, ...effectEdges(effects, leafToProjectedId, laneNodes, zoomLevel)],
     lanes,
   };
+}
+
+/**
+ * Dashed edges from the projected source node of a directed effect to the
+ * lane of its resolved target boundary. Effects whose source or target lane
+ * is outside the current view degrade to node badges only.
+ */
+function effectEdges(
+  effects: readonly Effect[] | undefined,
+  leafToProjectedId: ReadonlyMap<Id, Id>,
+  laneNodes: readonly Node[],
+  zoomLevel: number,
+): Edge[] {
+  if (!effects) return [];
+
+  const pathKeys = HIERARCHICAL_BOUNDARY_ORDER.slice(0, zoomLevel + 1);
+  const laneIds = new Set(laneNodes.map((node) => node.id));
+  const edges: Edge[] = [];
+  const seen = new Set<string>();
+
+  for (const effect of effects) {
+    if (effect.delivery.mode !== "directed") continue;
+    const sourceNodeId = leafToProjectedId.get(effect.source.activityId);
+    if (sourceNodeId === undefined) continue;
+    const laneId = laneIdForBoundary(effect.delivery.target, pathKeys);
+    if (!laneIds.has(laneId)) continue;
+
+    const id = `fx:${sourceNodeId}->${laneId}:${effect.payload.schema}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+
+    edges.push({
+      id,
+      source: sourceNodeId,
+      target: laneId,
+      label: effect.payload.schema,
+      markerEnd: { type: MarkerType.Arrow },
+      className: "edge-effect",
+    });
+  }
+
+  return edges;
 }

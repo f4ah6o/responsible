@@ -113,10 +113,14 @@ projectEffects(model, boundary, scopeId?) -> { ok: true; effects: Effect[] } | {
 
 ## Viewer（Stage 3）
 
-- Activity ノード上に宣言された effect（payload kind + schema）を表示し、directed effect はフローエッジと区別された破線のレーン横断エッジとして描画する。
-- `ModelLoader` は v1 文書を受け入れる。v0 文書は従来どおり読み込める（任意で v1 への移行を提案してもよい）。
-- 契約と作用を含む v1 サンプルプロセスを追加し、二重バージョン対応を固定するため v0 サンプルを 1 つ残す。
-- `README.md` / `README.ja.md` のスキーマ節と `examples/` を更新する。
+`src/viewer/` に実装済みであり、`src/__tests__/effect-flow.test.ts` で検証されている:
+
+- 観測可能な effect は Activity ノード上のバッジ（payload schema と target または配送モード）として描画される。directed effect はさらに、生成元ノードから解決後の target 境界のレーンへの破線エッジとして描画され、不可視のレーンハンドルでアンカーされる。target のレーンが現在のビューの外にある directed effect はバッジのみに退化する。
+- 境界横断規則は viewer 上で確認できる: `company` ズームではサンプルの directed effect は内部的（`tau`）で隠れ、`department`、`team` へズームすると現れる。broadcast の effect はすべてのレベルで表示される。
+- effect はドリルダウンスコープを `scopeId` として渡しつつフルモデルに対して解決されるため、スコープ外の target も既知の境界のままであり `INV-3` を誤発火しない。実際に発生した `INV-3` 違反は、フローの描画を止めない notice パネルとして表示される。
+- `ModelLoader` は二重バージョンパーサ経由で v1 文書を受け入れる。v0 文書とサンプルは従来どおり読み込める。`申請承認（契約と作用）` サンプル（`src/sample.ts`）と `examples/application-approval.v1.json` が契約と作用を実演し、他のサンプルは v0 のままである。
+
+**モデリング上の注意:** 階層的な boundary zoom の下では、directed の `target` はビューが射影するすべての軸（例: `company` から `person` まで）を宣言すべきである。target に欠けている軸はそのズームレベルで `<unassigned>` に解決され、同じレベルに unassigned な Activity が存在しない限り `INV-3` に違反する。
 
 ## 不変条件
 
@@ -131,7 +135,7 @@ projectEffects(model, boundary, scopeId?) -> { ok: true; effects: Effect[] } | {
 | ----- | -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | 1     | スキーマ型、二重バージョン検証、`migrateProcessModelToV1`、テスト                | `issues/done/20260706-implement-v1-schema-core.md`          |
 | 2     | `projectEffects`、境界横断規則、`INV-3` の表明、テスト                           | `issues/done/20260706-project-effects-across-boundaries.md` |
-| 3     | viewer の effect 描画、v1 サンプル + example JSON、loader / README / docs の更新 | `issues/open/20260706-render-effects-in-viewer.md`          |
+| 3     | viewer の effect 描画、v1 サンプル + example JSON、loader / README / docs の更新 | `issues/done/20260706-render-effects-in-viewer.md`          |
 
 後続 Stage は先行 Stage の受け入れ条件が満たされる前に着手してはならないが、各 Stage は単独でリリース可能である。
 

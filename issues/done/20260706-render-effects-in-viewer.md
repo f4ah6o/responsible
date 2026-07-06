@@ -1,10 +1,10 @@
 # viewer に Effect を描画し v1 サンプルを追加する（Stage 3）
 
-Status: open
+Status: done
 Model: Claude
 Created: 2026-07-06
 Updated: 2026-07-06
-Branch: (未着手)
+Branch: claude/responsible-v1-impl-xkq73q
 
 ## 概要
 
@@ -39,10 +39,10 @@ Branch: (未着手)
 
 ## 受け入れ条件
 
-- [ ] 境界ズームを動かすと、同一境界に collapse された directed effect が隠れ、境界を跨ぐビューで現れる。
-- [ ] v1 example JSON が `ModelLoader` から読み込め、effect が描画される。
-- [ ] v0 example / サンプルが従来どおり動作する。
-- [ ] `pnpm run check && pnpm run typecheck && pnpm test && pnpm run build` が通る。
+- [x] 境界ズームを動かすと、同一境界に collapse された directed effect が隠れ、境界を跨ぐビューで現れる。
+- [x] v1 example JSON が `ModelLoader` から読み込め、effect が描画される。
+- [x] v0 example / サンプルが従来どおり動作する。
+- [x] `pnpm run check && pnpm run typecheck && pnpm test && pnpm run build` が通る。
 
 ## テスト計画
 
@@ -64,3 +64,4 @@ Branch: (未着手)
 ## 注記
 
 - 規範: `docs/responsible-v1.md` の「Viewer（Stage 3）」。着手は Stage 2 の受け入れ条件成立後。
+- 2026-07-06: 実装完了。effect はノード上のバッジ + directed の破線エッジ（target 境界レーンへ不可視ハンドルでアンカー）として描画。target レーンがビュー外の場合はバッジのみに退化。`INV-3` 違反はフロー描画を止めない notice パネルで表示。effect の解決はフルモデル + `scopeId` で行い、ドリルダウンでの誤発火を回避。レイアウトのカード高さ見積もりに effect 行を加算。凡例をツールバーに追加。v1 サンプル `申請承認（契約と作用）` と `examples/application-approval.v1.json` を追加し、`node:test`（`effect-flow.test.ts`）と Playwright での目視（company / department / team ズーム）で検証した。broadcast / observable のノード表現はバッジで確定し、当初案の凡例つき別表現は不要と判断。

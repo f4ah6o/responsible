@@ -29,6 +29,16 @@ function parseBoundaryPath(boundaryStr: string): string[] {
   });
 }
 
+/**
+ * The deepest lane node id a boundary id falls into, matching the ids built
+ * by `buildLaneHierarchy`. Used to anchor directed-effect edges to the lane
+ * of their resolved target boundary.
+ */
+export function laneIdForBoundary(boundaryStr: string, pathKeys: readonly string[]): string {
+  const segments = parseBoundaryPath(boundaryStr);
+  return `lane:${pathKeys.map((key, index) => `${key}:${segments[index]}`).join("/")}`;
+}
+
 export function buildLaneHierarchy(
   view: ProcessView,
   _activities: Readonly<Record<Id, ActivityDef>>,

@@ -9,6 +9,7 @@ import {
   leafActivityIds,
   parseProcessModelJson,
   projectDagByResponsibilityBoundary,
+  projectEffects,
 } from "../index.js";
 import type {
   ActivityDef,
@@ -193,15 +194,32 @@ export function ProcessViewer() {
     }
   }, [model, currentScopeId, boundary]);
 
+  // Effects resolve against the full model (not the scoped one) so a directed
+  // target outside the drill-down scope stays a known boundary; its edge then
+  // simply has no lane in the view and degrades to a node badge.
+  const effectProjection = useMemo(
+    () => projectEffects(model, boundary, currentScopeId),
+    [model, boundary, currentScopeId],
+  );
+  const effects = effectProjection.ok ? effectProjection.effects : undefined;
+  const effectIssues = effectProjection.ok ? undefined : effectProjection.issues;
+
   const projected = projection.view;
   const activeHeights = heightMode === "measured" ? measuredHeights : undefined;
 
   const flow = useMemo(
     () =>
       projected
-        ? projectionToFlow(projected, model.activities, selectedLeafId, zoomLevel, activeHeights)
+        ? projectionToFlow(
+            projected,
+            model.activities,
+            selectedLeafId,
+            zoomLevel,
+            activeHeights,
+            effects,
+          )
         : { nodes: [], edges: [], lanes: [] },
-    [projected, model, selectedLeafId, zoomLevel, activeHeights],
+    [projected, model, selectedLeafId, zoomLevel, activeHeights, effects],
   );
 
   const scopeKey = validScopePath.join(",");
@@ -362,6 +380,20 @@ export function ProcessViewer() {
               </div>
             )
           }
+          notice={
+            effectIssues && (
+              <div className="effect-issues" role="alert">
+                <strong>Effect を表示できません（INV-3 違反）</strong>
+                <p>
+                  {effectIssues
+                    .slice(0, 3)
+                    .map((issue) => `${issue.path}: ${issue.message}`)
+                    .join(" / ")}
+                  {effectIssues.length > 3 ? ` ほか${effectIssues.length - 3}件` : ""}
+                </p>
+              </div>
+            )
+          }
           toolbar={
             <>
               <ProcessSelect
@@ -384,6 +416,12 @@ export function ProcessViewer() {
                 error={scopeError}
               />
               <ModelLoader onLoadFile={handleLoadFile} error={importError} />
+              {effects && effects.length > 0 && (
+                <span className="effect-legend">
+                  <span className="legend-dash" aria-hidden="true" />
+                  Effect（境界を越えて観測可能な作用。破線は directed の配送先）
+                </span>
+              )}
             </>
           }
         />

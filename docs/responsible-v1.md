@@ -113,10 +113,14 @@ projectEffects(model, boundary, scopeId?) -> { ok: true; effects: Effect[] } | {
 
 ## Viewer (stage 3)
 
-- Render declared effects on Activity nodes (payload kind + schema) and directed effects as dashed cross-lane edges distinct from flow edges.
-- `ModelLoader` accepts v1 documents; v0 documents load unchanged (optionally offering the v1 upgrade).
-- Add a v1 sample process with contracts and effects; keep one v0 sample to pin dual-version support.
-- Update `README.md` / `README.ja.md` schema sections and `examples/`.
+Implemented in `src/viewer/` and covered by `src/__tests__/effect-flow.test.ts`:
+
+- Observable effects render as badges on Activity nodes (payload schema plus target or delivery mode); directed effects additionally render as dashed edges from the source node to the resolved target boundary's lane, anchored by an invisible lane handle. A directed effect whose target lane is outside the current view degrades to a badge only.
+- The boundary-crossing rule is visible in the viewer: at `company` zoom the sample's directed effects are internal (`tau`) and hidden; they appear as the zoom moves to `department` and `team`. Broadcast effects stay visible at every level.
+- Effects resolve against the full model with the drill-down scope passed as `scopeId`, so a target outside the scope stays a known boundary instead of tripping `INV-3`. `INV-3` violations that do occur show as a non-blocking notice panel while the flow keeps rendering.
+- `ModelLoader` accepts v1 documents through the dual-version parser; v0 documents and samples load unchanged. The `申請承認（契約と作用）` sample (`src/sample.ts`) and `examples/application-approval.v1.json` exercise contracts and effects; the other samples remain v0.
+
+**Modeling note:** under hierarchical boundary zoom, a directed `target` should declare every axis the views project on (e.g. `company` through `person`). An axis missing from the target resolves to `<unassigned>` at that zoom level and, unless some Activity is also unassigned there, violates `INV-3`.
 
 ## Invariants
 
@@ -131,7 +135,7 @@ projectEffects(model, boundary, scopeId?) -> { ok: true; effects: Effect[] } | {
 | ----- | ----------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | 1     | Schema types, dual-version validation, `migrateProcessModelToV1`, tests       | `issues/done/20260706-implement-v1-schema-core.md`          |
 | 2     | `projectEffects`, boundary-crossing rule, `INV-3` assertion, tests            | `issues/done/20260706-project-effects-across-boundaries.md` |
-| 3     | Viewer effect rendering, v1 sample + example JSON, loader/README/docs updates | `issues/open/20260706-render-effects-in-viewer.md`          |
+| 3     | Viewer effect rendering, v1 sample + example JSON, loader/README/docs updates | `issues/done/20260706-render-effects-in-viewer.md`          |
 
 Later stages must not begin before the previous stage's acceptance criteria pass, but each stage is independently shippable.
 
