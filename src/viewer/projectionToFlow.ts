@@ -5,6 +5,7 @@ import type { ActivityDef, Id, ProcessView, ProjectedActivity } from "../model.j
 import type { Effect } from "../semantic.js";
 import { buildLaneHierarchy, laneIdForBoundary } from "./buildLaneHierarchy.js";
 import { layoutHierarchy } from "./layoutHierarchy.js";
+import type { MeasuredSize } from "./SizeReportContext.js";
 export type { LaneNodeData } from "./layoutHierarchy.js";
 
 export type MemberInfo = {
@@ -23,6 +24,9 @@ export type ActivityNodeData = {
   effects: readonly Effect[];
   /** Per-member detail for composite nodes, so a fold can be expanded in place. */
   members: readonly MemberInfo[];
+  /** Horizontal room the card may use when expanded, so the member fold can
+   * spread into columns without hitting the next card in the lane. */
+  expandMaxWidth: number;
 };
 
 export type FlowLane = {
@@ -85,11 +89,11 @@ export function projectionToFlow(
   activities: Readonly<Record<Id, ActivityDef>>,
   selectedLeafId: Id | undefined,
   zoomLevel: number,
-  measuredHeights?: ReadonlyMap<string, number>,
+  measuredSizes?: ReadonlyMap<string, MeasuredSize>,
   effects?: readonly Effect[],
 ): ProjectionFlow {
   const hierarchy = buildLaneHierarchy(view, activities, zoomLevel);
-  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities, measuredHeights);
+  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities, measuredSizes);
 
   const lanes: FlowLane[] = laneNodes.map((n, i) => ({
     id: n.id,
@@ -118,10 +122,13 @@ export function projectionToFlow(
         names: activityNames(activity, activities),
         effects: effects?.filter((effect) => sourceIds.includes(effect.source.activityId)) ?? [],
         members: membersOf(activity, activities, effects),
+        expandMaxWidth: layout?.maxWidth ?? NODE_WIDTH,
       } satisfies ActivityNodeData,
       ...(parentId !== undefined ? { parentId, extent: "parent" as const } : {}),
       className: `activity-node${selected ? " is-selected" : ""}`,
-      width: NODE_WIDTH,
+      // initialWidth (not width) so the node wrapper tracks the card when an
+      // expanded fold widens it, keeping edge anchors on the real right edge.
+      initialWidth: NODE_WIDTH,
       selected,
       draggable: false,
       selectable: false,

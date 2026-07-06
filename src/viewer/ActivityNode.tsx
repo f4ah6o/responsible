@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
 import type { ActivityNodeData, MemberInfo } from "./projectionToFlow";
-import { useHeightReporter } from "./HeightReportContext";
+import { useSizeReporter } from "./SizeReportContext";
 
 type ActivityNodeType = Node<ActivityNodeData, "activity">;
 
@@ -10,6 +10,25 @@ const KIND_LABELS: Record<string, string> = {
   atomic: "単体",
   composite: "合成",
 };
+
+const BASE_CARD_WIDTH = 180;
+const MEMBER_COLUMN_WIDTH = 150;
+const MEMBER_GAP = 6;
+const CARD_PADDING_X = 26; // horizontal padding + border of .activity-card
+
+// How many member columns fit in the horizontal room the layout granted.
+function memberColumns(memberCount: number, maxWidth: number): number {
+  const usable = maxWidth - CARD_PADDING_X;
+  const fit = Math.floor((usable + MEMBER_GAP) / (MEMBER_COLUMN_WIDTH + MEMBER_GAP));
+  return Math.min(memberCount, Math.max(1, fit));
+}
+
+function cardWidthFor(columns: number): number {
+  return Math.max(
+    BASE_CARD_WIDTH,
+    CARD_PADDING_X + columns * MEMBER_COLUMN_WIDTH + (columns - 1) * MEMBER_GAP,
+  );
+}
 
 function EffectBadges({ effects }: { effects: ActivityNodeData["effects"] }) {
   if (effects.length === 0) return null;
@@ -56,13 +75,13 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
   const kindLabel = KIND_LABELS[activity.kind] ?? activity.kind;
 
   const ref = useRef<HTMLDivElement>(null);
-  const report = useHeightReporter();
+  const report = useSizeReporter();
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const observer = new ResizeObserver(() => {
-      report(activity.id, el.offsetHeight);
+      report(activity.id, { width: el.offsetWidth, height: el.offsetHeight });
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -70,12 +89,17 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
 
   const boundaryLabel = leafBoundaryLabel(activity.boundary);
 
+  // With horizontal room to spare, an expanded fold spreads into columns so
+  // the card grows sideways before it grows the lane vertically.
+  const columns = isComposite && expanded ? memberColumns(members.length, data.expandMaxWidth) : 1;
+
   return (
     <div
       ref={ref}
       className={`activity-card${selected ? " is-selected" : ""}`}
       data-kind={activity.kind}
       data-expanded={isComposite && expanded ? "true" : undefined}
+      style={columns > 1 ? { width: cardWidthFor(columns) } : undefined}
     >
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <Handle type="source" position={Position.Right} isConnectable={false} />
@@ -112,7 +136,15 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
             {expanded ? "▾ 内訳を隠す" : `▸ 内訳を表示（${members.length}）`}
           </button>
           {expanded && (
-            <ul className="activity-members" aria-label="合成された Activity の内訳">
+            <ul
+              className="activity-members"
+              aria-label="合成された Activity の内訳"
+              style={
+                columns > 1
+                  ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+                  : undefined
+              }
+            >
               {members.map((member) => (
                 <MemberRow key={member.id} member={member} />
               ))}
