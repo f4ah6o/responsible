@@ -1,5 +1,6 @@
 import type { Node } from "@xyflow/react";
 import type { HierarchicalLane, LaneHierarchy } from "./buildLaneHierarchy.js";
+import type { MeasuredSize } from "./SizeReportContext.js";
 import type { ActivityDef, Id, ProjectedActivity } from "../model.js";
 
 export type LaneNodeData = {
@@ -16,7 +17,8 @@ export type ActivityLayout = {
   y: number;
   localIndex: number;
   /** Horizontal room the card may grow into when expanded, up to the next
-   * card in the same lane (or the lane's right edge). */
+   * card in the same lane. Unbounded (Infinity) when nothing follows in the
+   * lane — the canvas then widens to fit the measured card. */
   maxWidth: number;
 };
 
@@ -82,13 +84,13 @@ function activityTitle(
 function leafLaneHeight(
   activities: ProjectedActivity[],
   defs: Readonly<Record<Id, ActivityDef>>,
-  measuredHeights?: ReadonlyMap<string, number>,
+  measuredSizes?: ReadonlyMap<string, MeasuredSize>,
 ): number {
   if (activities.length === 0) return LANE_HEADER_HEIGHT + 120;
   const maxCard = Math.max(
     ...activities.map(
       (a) =>
-        measuredHeights?.get(a.id) ??
+        measuredSizes?.get(a.id)?.height ??
         estimateCardHeight(activityTitle(a, defs), declaredEffectCount(a, defs)),
     ),
   );
@@ -103,13 +105,13 @@ type LaneMeasure = { height: number };
 function measureLane(
   lane: HierarchicalLane,
   defs: Readonly<Record<Id, ActivityDef>>,
-  measuredHeights: ReadonlyMap<string, number> | undefined,
+  measuredSizes: ReadonlyMap<string, MeasuredSize> | undefined,
 ): LaneMeasure {
   if (lane.children.length === 0) {
-    return { height: leafLaneHeight(lane.activities, defs, measuredHeights) };
+    return { height: leafLaneHeight(lane.activities, defs, measuredSizes) };
   }
 
-  const childHeights = lane.children.map((c) => measureLane(c, defs, measuredHeights).height);
+  const childHeights = lane.children.map((c) => measureLane(c, defs, measuredSizes).height);
   const totalChildHeight = childHeights.reduce((s, h) => s + h, 0);
   const gaps = (lane.children.length - 1) * LANE_PADDING_Y;
 
@@ -126,12 +128,12 @@ function placeLane(
   parentId: string | undefined,
   canvasWidth: number,
   defs: Readonly<Record<Id, ActivityDef>>,
-  measuredHeights: ReadonlyMap<string, number> | undefined,
+  measuredSizes: ReadonlyMap<string, MeasuredSize> | undefined,
   activityFlowIndex: ReadonlyMap<string, number>,
   laneNodes: Node[],
   activityLayouts: Map<string, ActivityLayout>,
 ): LaneMeasure {
-  const m = measureLane(lane, defs, measuredHeights);
+  const m = measureLane(lane, defs, measuredSizes);
 
   laneNodes.push({
     id: lane.id,
@@ -159,12 +161,12 @@ function placeLane(
     lane.activities.forEach((activity, localIndex) => {
       const fi = activityFlowIndex.get(activity.id) ?? localIndex;
       const x = LEFT_PAD + fi * HORIZONTAL_STEP;
-      // Room to grow sideways: up to the next card in this lane, else the lane edge.
+      // Room to grow sideways: up to the next card in this lane, else unbounded.
       const nextFi = laneFlowIndices.find((candidate) => candidate > fi);
       const rightEdge =
         nextFi !== undefined
           ? LEFT_PAD + nextFi * HORIZONTAL_STEP - EXPAND_GAP
-          : canvasWidth - RIGHT_PAD;
+          : Number.POSITIVE_INFINITY;
       activityLayouts.set(activity.id, {
         parentId: lane.id,
         x,
@@ -182,7 +184,7 @@ function placeLane(
         lane.id,
         canvasWidth,
         defs,
-        measuredHeights,
+        measuredSizes,
         activityFlowIndex,
         laneNodes,
         activityLayouts,
@@ -197,14 +199,23 @@ function placeLane(
 export function layoutHierarchy(
   hierarchy: LaneHierarchy,
   activities: Readonly<Record<Id, ActivityDef>>,
-  measuredHeights?: ReadonlyMap<string, number>,
+  measuredSizes?: ReadonlyMap<string, MeasuredSize>,
 ): HierarchyLayout {
   globalIndex = 0;
   const laneNodes: Node[] = [];
   const activityLayouts = new Map<string, ActivityLayout>();
 
   const totalActivities = hierarchy.activityFlowIndex.size;
-  const canvasWidth = LEFT_PAD + Math.max(1, totalActivities) * HORIZONTAL_STEP + RIGHT_PAD;
+  // Base width from flow order; widened when a measured (expanded) card needs
+  // more room than the flow grid provides, so lanes grow with the fold.
+  let canvasWidth = LEFT_PAD + Math.max(1, totalActivities) * HORIZONTAL_STEP + RIGHT_PAD;
+  if (measuredSizes) {
+    for (const [id, fi] of hierarchy.activityFlowIndex) {
+      const width = measuredSizes.get(id)?.width;
+      if (width === undefined) continue;
+      canvasWidth = Math.max(canvasWidth, LEFT_PAD + fi * HORIZONTAL_STEP + width + RIGHT_PAD);
+    }
+  }
 
   // Root lanes stacked vertically at x=0
   let rootY = 0;
@@ -215,7 +226,7 @@ export function layoutHierarchy(
       undefined,
       canvasWidth,
       activities,
-      measuredHeights,
+      measuredSizes,
       hierarchy.activityFlowIndex,
       laneNodes,
       activityLayouts,

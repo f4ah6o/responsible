@@ -29,8 +29,10 @@ const browser = await chromium.launch({
 
 ## Flows worth driving
 
-- Wait for `.activity-card`, then ~600ms extra: measured heights flush on a
-  requestAnimationFrame, and lanes relayout one frame after any card resizes.
+- Wait for `.activity-card`, then ~600ms extra: measured card sizes flush on a
+  requestAnimationFrame, and lanes/canvas relayout one frame after any card
+  resizes (height grows the lane; width widens the canvas when a fold has no
+  next card in its lane).
 - Composite expansion: click `.member-toggle` (aria-expanded tracks state),
   then compare `getBoundingClientRect()` of `.activity-card` vs its enclosing
   `.react-flow__node.lane-node` — the card's bottom must stay above the lane's.

@@ -5,6 +5,7 @@ import type { ActivityDef, Id, ProcessView, ProjectedActivity } from "../model.j
 import type { Effect } from "../semantic.js";
 import { buildLaneHierarchy, laneIdForBoundary } from "./buildLaneHierarchy.js";
 import { layoutHierarchy } from "./layoutHierarchy.js";
+import type { MeasuredSize } from "./SizeReportContext.js";
 export type { LaneNodeData } from "./layoutHierarchy.js";
 
 export type MemberInfo = {
@@ -88,11 +89,11 @@ export function projectionToFlow(
   activities: Readonly<Record<Id, ActivityDef>>,
   selectedLeafId: Id | undefined,
   zoomLevel: number,
-  measuredHeights?: ReadonlyMap<string, number>,
+  measuredSizes?: ReadonlyMap<string, MeasuredSize>,
   effects?: readonly Effect[],
 ): ProjectionFlow {
   const hierarchy = buildLaneHierarchy(view, activities, zoomLevel);
-  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities, measuredHeights);
+  const { laneNodes, activityLayouts } = layoutHierarchy(hierarchy, activities, measuredSizes);
 
   const lanes: FlowLane[] = laneNodes.map((n, i) => ({
     id: n.id,

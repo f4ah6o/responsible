@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
 import type { ActivityNodeData, MemberInfo } from "./projectionToFlow";
-import { useHeightReporter } from "./HeightReportContext";
+import { useSizeReporter } from "./SizeReportContext";
 
 type ActivityNodeType = Node<ActivityNodeData, "activity">;
 
@@ -75,13 +75,13 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
   const kindLabel = KIND_LABELS[activity.kind] ?? activity.kind;
 
   const ref = useRef<HTMLDivElement>(null);
-  const report = useHeightReporter();
+  const report = useSizeReporter();
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const observer = new ResizeObserver(() => {
-      report(activity.id, el.offsetHeight);
+      report(activity.id, { width: el.offsetWidth, height: el.offsetHeight });
     });
     observer.observe(el);
     return () => observer.disconnect();

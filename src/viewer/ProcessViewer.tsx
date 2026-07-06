@@ -24,7 +24,7 @@ import type {
 import { sampleProcesses, type SampleProcess } from "../sample.js";
 import { BoundaryZoomControl } from "./BoundaryZoomControl";
 import { FlowCanvas } from "./FlowCanvas";
-import { HeightReportContext } from "./HeightReportContext";
+import { SizeReportContext, type MeasuredSize } from "./SizeReportContext";
 import { ModelLoader } from "./ModelLoader";
 import { ProcessSelect } from "./ProcessSelect";
 import { projectionToFlow } from "./projectionToFlow";
@@ -162,10 +162,11 @@ export function ProcessViewer() {
   );
   const [scopeError, setScopeError] = useState<string | undefined>();
   const [importError, setImportError] = useState<string | undefined>();
-  // Lane heights always come from measured card heights (ResizeObserver), so an
-  // expanded composite card grows its lane instead of overflowing the frame.
-  const [measuredHeights, setMeasuredHeights] = useState<ReadonlyMap<string, number>>(new Map());
-  const pendingHeights = useRef<Map<string, number>>(new Map());
+  // Lane frames always follow measured card sizes (ResizeObserver): an expanded
+  // composite grows its lane's height, and the canvas widens when a fold needs
+  // more sideways room than the flow grid provides.
+  const [measuredSizes, setMeasuredSizes] = useState<ReadonlyMap<string, MeasuredSize>>(new Map());
+  const pendingSizes = useRef<Map<string, MeasuredSize>>(new Map());
   const [selectedLeafId, setSelectedLeafId] = useState<Id | undefined>(() =>
     firstLeafId(initialProcess.model, initialProcess.rootActivityId),
   );
@@ -214,11 +215,11 @@ export function ProcessViewer() {
             model.activities,
             selectedLeafId,
             zoomLevel,
-            measuredHeights,
+            measuredSizes,
             effects,
           )
         : { nodes: [], edges: [], lanes: [] },
-    [projected, model, selectedLeafId, zoomLevel, measuredHeights, effects],
+    [projected, model, selectedLeafId, zoomLevel, measuredSizes, effects],
   );
 
   const scopeKey = validScopePath.join(",");
@@ -231,20 +232,20 @@ export function ProcessViewer() {
     history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
   }, [processId, zoomLevel, scopeKey]);
 
-  const resetHeights = useCallback(() => {
-    setMeasuredHeights(new Map());
-    pendingHeights.current = new Map();
+  const resetSizes = useCallback(() => {
+    setMeasuredSizes(new Map());
+    pendingSizes.current = new Map();
   }, []);
 
-  const handleHeightMeasured = useCallback((id: string, height: number) => {
-    pendingHeights.current.set(id, height);
+  const handleSizeMeasured = useCallback((id: string, size: MeasuredSize) => {
+    pendingSizes.current.set(id, size);
     // batch: flush on next animation frame to avoid per-card re-renders
     requestAnimationFrame(() => {
-      if (pendingHeights.current.size === 0) return;
-      setMeasuredHeights((prev) => {
+      if (pendingSizes.current.size === 0) return;
+      setMeasuredSizes((prev) => {
         const next = new Map(prev);
-        for (const [k, v] of pendingHeights.current) next.set(k, v);
-        pendingHeights.current = new Map();
+        for (const [k, v] of pendingSizes.current) next.set(k, v);
+        pendingSizes.current = new Map();
         return next;
       });
     });
@@ -265,9 +266,9 @@ export function ProcessViewer() {
       setScopePath([process.rootActivityId]);
       setScopeError(undefined);
       setSelectedLeafId(firstLeafId(process.model, process.rootActivityId));
-      resetHeights();
+      resetSizes();
     },
-    [resetHeights],
+    [resetSizes],
   );
 
   const handleProcessChange = useCallback(
@@ -321,9 +322,9 @@ export function ProcessViewer() {
     (index: number) => {
       setScopePath((path) => path.slice(0, index + 1));
       setScopeError(undefined);
-      resetHeights();
+      resetSizes();
     },
-    [resetHeights],
+    [resetSizes],
   );
 
   const handleDrillDown = useCallback(
@@ -346,22 +347,22 @@ export function ProcessViewer() {
       setScopePath((path) => [...lastValidScopePath(model, path, rootId), id]);
       setScopeError(undefined);
       setSelectedLeafId(leafIds[0]);
-      resetHeights();
+      resetSizes();
     },
-    [boundary, model, rootId, resetHeights],
+    [boundary, model, rootId, resetSizes],
   );
 
   const handleZoomIn = useCallback(() => {
     setZoomLevel((level) => (canZoomIn(level) ? level + 1 : level));
-    resetHeights();
-  }, [resetHeights]);
+    resetSizes();
+  }, [resetSizes]);
   const handleZoomOut = useCallback(() => {
     setZoomLevel((level) => (canZoomOut(level) ? level - 1 : level));
-    resetHeights();
-  }, [resetHeights]);
+    resetSizes();
+  }, [resetSizes]);
 
   return (
-    <HeightReportContext.Provider value={handleHeightMeasured}>
+    <SizeReportContext.Provider value={handleSizeMeasured}>
       <main className="shell">
         <FlowCanvas
           nodes={flow.nodes}
@@ -419,6 +420,6 @@ export function ProcessViewer() {
           }
         />
       </main>
-    </HeightReportContext.Provider>
+    </SizeReportContext.Provider>
   );
 }
