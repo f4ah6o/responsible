@@ -446,6 +446,66 @@ button {
   opacity: 0;
   pointer-events: none;
 }
+.activity-card .react-flow__handle.effect-out-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+.member-toggle {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  background: #fff;
+  color: #4338ca;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.member-toggle:hover {
+  background: #eef2ff;
+}
+.activity-members {
+  margin: 4px 0 0;
+  padding: 6px 0 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  border-top: 1px dashed #c7d2fe;
+}
+.member-row {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e0e7ff;
+}
+.member-name {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #1e293b;
+  overflow-wrap: anywhere;
+}
+.member-boundary {
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 0.66rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.member-type {
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+.member-row .activity-effects {
+  margin-top: 2px;
+}
 .effect-legend {
   display: inline-flex;
   align-items: center;

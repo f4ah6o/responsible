@@ -4,6 +4,7 @@
 
 ### Added
 
+- Expand composite Activity nodes in the viewer: a folded same-boundary composite (e.g. `申請を審査する + 申請を承認する` at the department/section boundary) now shows a `内訳を表示` toggle that reveals each merged Activity in place — name, finer-grained responsibility path (`… / 審査チーム / 田中`), input → output, and per-member effects — so a fold that a coarser boundary collapses can be inspected without changing the projection. In measured (`計測`) height mode the lanes reflow to fit; the projection core is unchanged. (`src/viewer/ActivityNode.tsx`, `src/viewer/projectionToFlow.ts`)
 - Define the `responsible.v1` schema — declarative `requires` / `ensures` (opaque fact references) and `effects` (payload + boundary-crossing delivery rule) on Activities — as a normative document with a staged implementation plan (`docs/responsible-v1.md`, ja pair), plus follow-up issues for effect projection and viewer rendering (`issues/open/`).
 - Render declared v1 effects in the viewer (stage 3): observable effects appear as badges on Activity nodes and directed effects as dashed edges to the resolved target boundary's lane, hiding and appearing with boundary zoom per the tau rule; `INV-3` issues show as a non-blocking notice. Adds the `申請承認（契約と作用）` sample process and `examples/application-approval.v1.json`; the JSON loader accepts both schema versions. (`issues/done/20260706-render-effects-in-viewer.md`)
 - Implement v1 effect projection (stage 2): `projectEffects` (`src/effects.ts`) instantiates declared effects at a selected boundary — sources derived from the declaring Activity, directed targets resolved via `boundaryOfResponsibility`, same-boundary directed effects hidden as internal (`tau`) per the RBNF-consistent crossing rule, and unknown directed targets reported as `INV-3` violations with JSON paths — with `node:test` coverage. (`issues/done/20260706-project-effects-across-boundaries.md`)
@@ -40,6 +41,7 @@
 
 ### Fixed
 
+- Untangle directed-effect edges in the viewer: effect edges now leave the source node from a dedicated left-side handle and route to the target lane with orthogonal (`smoothstep`) routing, so they run along the left gutter instead of wrapping around from the right-hand flow handle and crossing the diagram. (`src/viewer/ActivityNode.tsx`, `src/viewer/projectionToFlow.ts`)
 - Resolve pre-existing `tsc --noEmit` errors in `src/boundary.ts` (readonly boundary expression narrowing) and `src/main.ts` (CSS side-effect import) so `pnpm run typecheck` passes. (`issues/polished/20260624-align-reference-impl-semantic-core.md`)
 
 ### Deprecated

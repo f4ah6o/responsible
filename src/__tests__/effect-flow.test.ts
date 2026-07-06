@@ -223,3 +223,56 @@ test("the bundled v1 example JSON validates, wraps, and projects effects", () =>
     true,
   );
 });
+
+test("a composite node exposes per-member detail so the fold can be expanded", () => {
+  // department zoom folds review + approve (both 管理部) into one composite.
+  const { flow } = flowAtZoom(v1Sample.model, v1Sample.rootActivityId, 1);
+  const composite = flow.nodes.find((node) => {
+    if (node.type !== "activity") return false;
+    const data = node.data as ActivityNodeData;
+    return (
+      data.activity.kind === "composite" && data.members.some((m) => m.id === "review_application")
+    );
+  });
+  assert.notEqual(composite, undefined);
+  const data = composite!.data as ActivityNodeData;
+  assert.deepEqual(
+    data.members.map((m) => m.id),
+    ["review_application", "approve_application"],
+  );
+  // Members carry their finer-grained responsibility path, revealing why they differ.
+  const review = data.members.find((m) => m.id === "review_application")!;
+  const approve = data.members.find((m) => m.id === "approve_application")!;
+  assert.match(review.responsibilityPath, /審査チーム \/ 田中$/);
+  assert.match(approve.responsibilityPath, /承認チーム \/ 鈴木$/);
+  // Per-member effects are scoped to that member only.
+  assert.equal(
+    approve.effects.some((effect) => effect.payload.schema === "ApprovalResult"),
+    true,
+  );
+  assert.equal(
+    review.effects.some((effect) => effect.payload.schema === "ApprovalResult"),
+    false,
+  );
+});
+
+test("atomic nodes carry no members", () => {
+  const { flow } = flowAtZoom(v1Sample.model, v1Sample.rootActivityId, 4);
+  const atomic = flow.nodes.find((node) => {
+    if (node.type !== "activity") return false;
+    const data = node.data as ActivityNodeData;
+    return data.activity.kind === "atomic" && data.activity.activityId === "review_application";
+  });
+  assert.notEqual(atomic, undefined);
+  assert.deepEqual((atomic!.data as ActivityNodeData).members, []);
+});
+
+test("effect edges leave from the dedicated left handle with orthogonal routing", () => {
+  const { flow } = flowAtZoom(v1Sample.model, v1Sample.rootActivityId, 1);
+  const effectEdges = flow.edges.filter((edge) => edge.className === "edge-effect");
+  assert.equal(effectEdges.length > 0, true);
+  for (const edge of effectEdges) {
+    assert.equal(edge.sourceHandle, "effect");
+    assert.equal(edge.type, "smoothstep");
+  }
+});
