@@ -2,9 +2,11 @@ import type {
   ActivityDef,
   ActivityStatus,
   BoundaryValue,
+  EffectPayloadKind,
   Id,
   ProcessModel,
   Responsibility,
+  SchemaVersion,
 } from "./model.js";
 
 export type ValidationIssue = Readonly<{
@@ -23,6 +25,14 @@ const ACTIVITY_STATUSES: readonly ActivityStatus[] = [
   "automatable",
 ];
 
+const SCHEMA_VERSIONS: readonly SchemaVersion[] = ["responsible.v0", "responsible.v1"];
+
+const V1_ACTIVITY_FIELDS = ["requires", "ensures", "effects"] as const;
+
+const EFFECT_PAYLOAD_KINDS: readonly EffectPayloadKind[] = ["domain-fact", "command", "data"];
+
+const EFFECT_DELIVERY_MODES = ["directed", "broadcast", "observable"] as const;
+
 /**
  * Validates an untrusted value (e.g. parsed JSON) as a `ProcessModel`.
  *
@@ -38,12 +48,13 @@ export function validateProcessModel(value: unknown): ValidationResult {
     return invalid([{ path: "$", message: "ProcessModel はオブジェクトである必要があります" }]);
   }
 
-  if (value["schemaVersion"] !== "responsible.v0") {
+  if (!SCHEMA_VERSIONS.includes(value["schemaVersion"] as SchemaVersion)) {
     issues.push({
       path: "$.schemaVersion",
-      message: `schemaVersion は "responsible.v0" である必要があります（受け取った値: ${JSON.stringify(value["schemaVersion"])}）`,
+      message: `schemaVersion は ${SCHEMA_VERSIONS.map((v) => `"${v}"`).join(" / ")} のいずれかである必要があります（受け取った値: ${JSON.stringify(value["schemaVersion"])}）`,
     });
   }
+  const isV1 = value["schemaVersion"] === "responsible.v1";
 
   const activities = value["activities"];
   const activityIds = new Set<Id>();
@@ -62,7 +73,7 @@ export function validateProcessModel(value: unknown): ValidationResult {
     }
     for (const [id, def] of Object.entries(activities)) {
       activityIds.add(id);
-      validateActivityDef(id, def, issues);
+      validateActivityDef(id, def, isV1, issues);
     }
     // Referential checks need the full id set, so they run in a second pass.
     for (const [id, def] of Object.entries(activities)) {
@@ -198,7 +209,7 @@ export function ensureRootActivity(
   };
 }
 
-function validateActivityDef(id: Id, def: unknown, issues: ValidationIssue[]): void {
+function validateActivityDef(id: Id, def: unknown, isV1: boolean, issues: ValidationIssue[]): void {
   const path = `$.activities.${id}`;
 
   if (!isRecord(def)) {
@@ -261,6 +272,115 @@ function validateActivityDef(id: Id, def: unknown, issues: ValidationIssue[]): v
       message:
         "responsibility は文字列 / 数値 / 真偽値 / 配列 / オブジェクトのみからなるオブジェクトである必要があります",
     });
+  }
+
+  if (!isV1) {
+    for (const field of V1_ACTIVITY_FIELDS) {
+      if (def[field] !== undefined) {
+        issues.push({
+          path: `${path}.${field}`,
+          message: `${field} は responsible.v1 のフィールドです（schemaVersion を "responsible.v1" にしてください）`,
+        });
+      }
+    }
+    return;
+  }
+
+  validateFactRefs(`${path}.requires`, def["requires"], issues);
+  validateFactRefs(`${path}.ensures`, def["ensures"], issues);
+  validateEffectDefs(`${path}.effects`, def["effects"], issues);
+}
+
+function validateFactRefs(path: string, value: unknown, issues: ValidationIssue[]): void {
+  if (value === undefined) return;
+
+  if (!Array.isArray(value)) {
+    issues.push({ path, message: "事実参照（FactRef）の配列である必要があります" });
+    return;
+  }
+  for (const [index, fact] of value.entries()) {
+    if (typeof fact !== "string" || fact.length === 0) {
+      issues.push({
+        path: `${path}[${index}]`,
+        message: "事実参照（FactRef）は空でない文字列である必要があります",
+      });
+    }
+  }
+}
+
+function validateEffectDefs(path: string, value: unknown, issues: ValidationIssue[]): void {
+  if (value === undefined) return;
+
+  if (!Array.isArray(value)) {
+    issues.push({ path, message: "effects は EffectDef の配列である必要があります" });
+    return;
+  }
+
+  for (const [index, effect] of value.entries()) {
+    const effectPath = `${path}[${index}]`;
+
+    if (!isRecord(effect)) {
+      issues.push({ path: effectPath, message: "effect はオブジェクトである必要があります" });
+      continue;
+    }
+
+    if (
+      effect["id"] !== undefined &&
+      (typeof effect["id"] !== "string" || effect["id"].length === 0)
+    ) {
+      issues.push({
+        path: `${effectPath}.id`,
+        message: "id は空でない文字列である必要があります",
+      });
+    }
+
+    const payload = effect["payload"];
+    if (!isRecord(payload)) {
+      issues.push({
+        path: `${effectPath}.payload`,
+        message: "payload はオブジェクトである必要があります",
+      });
+    } else {
+      if (!EFFECT_PAYLOAD_KINDS.includes(payload["kind"] as EffectPayloadKind)) {
+        issues.push({
+          path: `${effectPath}.payload.kind`,
+          message: `kind は ${EFFECT_PAYLOAD_KINDS.join(" / ")} のいずれかである必要があります`,
+        });
+      }
+      if (typeof payload["schema"] !== "string" || payload["schema"].length === 0) {
+        issues.push({
+          path: `${effectPath}.payload.schema`,
+          message: "schema は空でない文字列（スキーマ参照）である必要があります",
+        });
+      }
+    }
+
+    const delivery = effect["delivery"];
+    if (!isRecord(delivery)) {
+      issues.push({
+        path: `${effectPath}.delivery`,
+        message: "delivery はオブジェクトである必要があります",
+      });
+      continue;
+    }
+    const mode = delivery["mode"];
+    if (!EFFECT_DELIVERY_MODES.includes(mode as (typeof EFFECT_DELIVERY_MODES)[number])) {
+      issues.push({
+        path: `${effectPath}.delivery.mode`,
+        message: `mode は ${EFFECT_DELIVERY_MODES.join(" / ")} のいずれかである必要があります`,
+      });
+      continue;
+    }
+    if (mode === "directed") {
+      const target = delivery["target"];
+      if (!isResponsibility(target) || Object.keys(target).length === 0) {
+        issues.push({
+          path: `${effectPath}.delivery.target`,
+          message:
+            'directed の target は空でない Responsibility レコード（例: { "role": "Manager" }）である必要があります',
+        });
+      }
+    }
   }
 }
 

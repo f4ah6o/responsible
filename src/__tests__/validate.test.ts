@@ -39,8 +39,8 @@ test("validateProcessModel rejects non-object input", () => {
   assert.deepEqual(issuePaths([1, 2]), ["$"]);
 });
 
-test("validateProcessModel rejects a wrong schemaVersion", () => {
-  const paths = issuePaths({ ...validModel, schemaVersion: "responsible.v1" });
+test("validateProcessModel rejects an unknown schemaVersion", () => {
+  const paths = issuePaths({ ...validModel, schemaVersion: "responsible.v2" });
   assert.equal(paths.includes("$.schemaVersion"), true);
 });
 

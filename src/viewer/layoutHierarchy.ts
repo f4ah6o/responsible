@@ -42,13 +42,26 @@ function estimateTitleLines(title: string): number {
   return Math.ceil(Math.max(1, title.length) / charsPerLine);
 }
 
-function estimateCardHeight(title: string): number {
+const EFFECT_LINE_HEIGHT = 24;
+const EFFECT_LIST_GAP = 6;
+
+function estimateCardHeight(title: string, effectCount: number): number {
   return (
     CARD_PADDING_V +
     CARD_GAP_TOTAL +
     CARD_FIXED_LINES_HEIGHT +
-    estimateTitleLines(title) * TITLE_LINE_HEIGHT
+    estimateTitleLines(title) * TITLE_LINE_HEIGHT +
+    (effectCount > 0 ? EFFECT_LIST_GAP + effectCount * EFFECT_LINE_HEIGHT : 0)
   );
+}
+
+// Estimation upper bound: declared effects; the view may hide some as tau.
+function declaredEffectCount(
+  activity: ProjectedActivity,
+  defs: Readonly<Record<Id, ActivityDef>>,
+): number {
+  const ids = activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
+  return ids.reduce((sum, id) => sum + (defs[id]?.effects?.length ?? 0), 0);
 }
 
 function activityTitle(
@@ -67,7 +80,9 @@ function leafLaneHeight(
   if (activities.length === 0) return LANE_HEADER_HEIGHT + 120;
   const maxCard = Math.max(
     ...activities.map(
-      (a) => measuredHeights?.get(a.id) ?? estimateCardHeight(activityTitle(a, defs)),
+      (a) =>
+        measuredHeights?.get(a.id) ??
+        estimateCardHeight(activityTitle(a, defs), declaredEffectCount(a, defs)),
     ),
   );
   return LANE_HEADER_HEIGHT + maxCard + LANE_PADDING_BOTTOM;

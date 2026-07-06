@@ -31,13 +31,7 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
     return () => observer.disconnect();
   }, [activity.id, report]);
 
-  // boundary may be a full path "company:X|department:Y|team:Z" — show only leaf value
-  const boundaryLabel = (() => {
-    const parts = activity.boundary.split("|");
-    const last = parts[parts.length - 1] ?? activity.boundary;
-    const idx = last.indexOf(":");
-    return idx >= 0 ? last.slice(idx + 1) : last;
-  })();
+  const boundaryLabel = leafBoundaryLabel(activity.boundary);
 
   return (
     <div
@@ -56,6 +50,31 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
         {activity.input} → {activity.output}
       </div>
       <div className="activity-boundary">{boundaryLabel}</div>
+      {data.effects.length > 0 && (
+        <ul className="activity-effects" aria-label="観測可能な Effect">
+          {data.effects.map((effect, index) => (
+            <li
+              key={`${effect.source.activityId}:${index}`}
+              className="effect-badge"
+              data-mode={effect.delivery.mode}
+            >
+              {effect.payload.schema}
+              {effect.delivery.mode === "directed"
+                ? ` → ${leafBoundaryLabel(effect.delivery.target)}`
+                : ` (${effect.delivery.mode})`}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
+}
+
+// A boundary may be a full path "company:X|department:Y|team:Z" — show only
+// the leaf value.
+function leafBoundaryLabel(boundary: string): string {
+  const parts = boundary.split("|");
+  const last = parts[parts.length - 1] ?? boundary;
+  const idx = last.indexOf(":");
+  return idx >= 0 ? last.slice(idx + 1) : last;
 }

@@ -3,6 +3,8 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  Handle,
+  Position,
   ReactFlow,
   type Edge,
   type Node,
@@ -19,6 +21,13 @@ function LaneGroup({ data }: NodeProps<LaneNodeType>) {
   return (
     <div className="lane-group" data-depth={data.depth}>
       <span className="lane-label">{data.label}</span>
+      {/* Invisible anchor so directed-effect edges can terminate at the lane. */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={false}
+        className="lane-effect-handle"
+      />
     </div>
   );
 }
@@ -34,14 +43,23 @@ export type FlowCanvasProps = {
   onNodeClick: (nodeId: string) => void;
   toolbar?: React.ReactNode;
   overlay?: React.ReactNode;
+  notice?: React.ReactNode;
 };
 
-export function FlowCanvas({ nodes, edges, onNodeClick, toolbar, overlay }: FlowCanvasProps) {
+export function FlowCanvas({
+  nodes,
+  edges,
+  onNodeClick,
+  toolbar,
+  overlay,
+  notice,
+}: FlowCanvasProps) {
   return (
     <div className="flow-canvas">
       {toolbar && <div className="flow-toolbar">{toolbar}</div>}
       <div className="flow-body">
         {overlay && <div className="flow-overlay">{overlay}</div>}
+        {notice && <div className="flow-notice">{notice}</div>}
         <ReactFlow
           nodes={nodes}
           edges={edges}

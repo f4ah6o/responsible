@@ -798,6 +798,143 @@ const estimateApproval: ProcessModel = {
   views: HIERARCHICAL_VIEWS,
 };
 
+// 申請承認（契約と作用）: responsible.v1 のサンプル。requires / ensures / effects を宣言し、
+// boundary zoom に応じて directed effect が現れたり隠れたりする。company ズームでは
+// すべて同一境界（tau）で隠れ、department で 営業部→管理部 / 管理部→営業部 の作用が、
+// team で 審査チーム→承認チーム の作用が現れる。broadcast は常に表示される。
+const YAMADA = {
+  company: "あおい商事",
+  department: "営業部",
+  section: "営業一課",
+  team: "見積チーム",
+  person: "山田",
+} as const;
+const TANAKA = {
+  company: "あおい商事",
+  department: "管理部",
+  section: "審査課",
+  team: "審査チーム",
+  person: "田中",
+} as const;
+const SUZUKI = {
+  company: "あおい商事",
+  department: "管理部",
+  section: "審査課",
+  team: "承認チーム",
+  person: "鈴木",
+} as const;
+const SATO = {
+  company: "あおい商事",
+  department: "総務部",
+  section: "文書課",
+  team: "記録チーム",
+  person: "佐藤",
+} as const;
+
+const applicationApproval: ProcessModel = {
+  schemaVersion: "responsible.v1",
+  activities: {
+    application_approval: {
+      id: "application_approval",
+      name: "申請承認",
+      input: "顧客要望",
+      output: "保管済み申請",
+      status: "defined",
+      children: [
+        "draft_application",
+        "submit_application",
+        "review_application",
+        "approve_application",
+        "archive_application",
+      ],
+      responsibility: { company: "あおい商事" },
+    },
+    draft_application: {
+      id: "draft_application",
+      name: "申請書を作成する",
+      input: "顧客要望",
+      output: "申請書ドラフト",
+      status: "defined",
+      responsibility: YAMADA,
+      requires: ["顧客要望が確定している"],
+      ensures: ["Application.status = draft"],
+    },
+    submit_application: {
+      id: "submit_application",
+      name: "申請を提出する",
+      input: "申請書ドラフト",
+      output: "提出済み申請",
+      status: "defined",
+      responsibility: YAMADA,
+      requires: ["Application.status = draft", "必須項目が記入済み"],
+      ensures: ["Application.status = submitted", "SubmissionFact(Application, 山田) = true"],
+      effects: [
+        {
+          payload: { kind: "command", schema: "ApprovalRequest" },
+          delivery: { mode: "directed", target: TANAKA },
+        },
+      ],
+    },
+    review_application: {
+      id: "review_application",
+      name: "申請を審査する",
+      input: "提出済み申請",
+      output: "審査済み申請",
+      status: "defined",
+      responsibility: TANAKA,
+      requires: ["Application.status = submitted"],
+      ensures: ["Application.status = reviewed"],
+      effects: [
+        {
+          payload: { kind: "data", schema: "ReviewNote" },
+          delivery: { mode: "directed", target: SUZUKI },
+        },
+      ],
+    },
+    approve_application: {
+      id: "approve_application",
+      name: "申請を承認する",
+      input: "審査済み申請",
+      output: "承認済み申請",
+      status: "defined",
+      responsibility: SUZUKI,
+      requires: ["Application.status = reviewed", "ApprovalAuthority(鈴木, Application) = true"],
+      ensures: ["Application.status = approved", "ApprovalFact(Application, 鈴木) = true"],
+      effects: [
+        {
+          payload: { kind: "domain-fact", schema: "ApprovalResult" },
+          delivery: { mode: "directed", target: YAMADA },
+        },
+        {
+          payload: { kind: "domain-fact", schema: "ApprovalFact" },
+          delivery: { mode: "broadcast" },
+        },
+      ],
+    },
+    archive_application: {
+      id: "archive_application",
+      name: "申請を保管する",
+      input: "承認済み申請",
+      output: "保管済み申請",
+      status: "defined",
+      responsibility: SATO,
+      requires: ["Application.status = approved"],
+      ensures: ["Application.archived = true"],
+    },
+  },
+  flows: [
+    { from: "draft_application", to: "submit_application", contract: "ドラフトを提出できる" },
+    { from: "submit_application", to: "review_application", contract: "提出済み申請を審査できる" },
+    { from: "review_application", to: "approve_application", contract: "審査結果で承認判断できる" },
+    {
+      from: "approve_application",
+      to: "archive_application",
+      contract: "承認済み申請を保管できる",
+    },
+  ],
+  views: HIERARCHICAL_VIEWS,
+};
+
 export const sampleProcesses: readonly SampleProcess[] = [
   {
     id: "software_development",
@@ -822,6 +959,12 @@ export const sampleProcesses: readonly SampleProcess[] = [
     title: "見積承認（分岐・合流）",
     rootActivityId: "estimate_approval",
     model: estimateApproval,
+  },
+  {
+    id: "application_approval",
+    title: "申請承認（契約と作用）",
+    rootActivityId: "application_approval",
+    model: applicationApproval,
   },
 ];
 

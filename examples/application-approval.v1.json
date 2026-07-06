@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "responsible.v1",
+  "activities": {
+    "draft_application": {
+      "id": "draft_application",
+      "name": "申請書を作成する",
+      "input": "顧客要望",
+      "output": "申請書ドラフト",
+      "status": "defined",
+      "responsibility": {
+        "company": "あおい商事",
+        "department": "営業部",
+        "section": "営業一課",
+        "team": "見積チーム",
+        "person": "山田"
+      },
+      "requires": ["顧客要望が確定している"],
+      "ensures": ["Application.status = draft"]
+    },
+    "submit_application": {
+      "id": "submit_application",
+      "name": "申請を提出する",
+      "input": "申請書ドラフト",
+      "output": "提出済み申請",
+      "status": "defined",
+      "responsibility": {
+        "company": "あおい商事",
+        "department": "営業部",
+        "section": "営業一課",
+        "team": "見積チーム",
+        "person": "山田"
+      },
+      "requires": ["Application.status = draft", "必須項目が記入済み"],
+      "ensures": ["Application.status = submitted", "SubmissionFact(Application, 山田) = true"],
+      "effects": [
+        {
+          "payload": { "kind": "command", "schema": "ApprovalRequest" },
+          "delivery": {
+            "mode": "directed",
+            "target": {
+              "company": "あおい商事",
+              "department": "管理部",
+              "section": "審査課",
+              "team": "審査チーム",
+              "person": "田中"
+            }
+          }
+        }
+      ]
+    },
+    "review_application": {
+      "id": "review_application",
+      "name": "申請を審査する",
+      "input": "提出済み申請",
+      "output": "審査済み申請",
+      "status": "defined",
+      "responsibility": {
+        "company": "あおい商事",
+        "department": "管理部",
+        "section": "審査課",
+        "team": "審査チーム",
+        "person": "田中"
+      },
+      "requires": ["Application.status = submitted"],
+      "ensures": ["Application.status = reviewed"],
+      "effects": [
+        {
+          "payload": { "kind": "data", "schema": "ReviewNote" },
+          "delivery": {
+            "mode": "directed",
+            "target": {
+              "company": "あおい商事",
+              "department": "管理部",
+              "section": "審査課",
+              "team": "承認チーム",
+              "person": "鈴木"
+            }
+          }
+        }
+      ]
+    },
+    "approve_application": {
+      "id": "approve_application",
+      "name": "申請を承認する",
+      "input": "審査済み申請",
+      "output": "承認済み申請",
+      "status": "defined",
+      "responsibility": {
+        "company": "あおい商事",
+        "department": "管理部",
+        "section": "審査課",
+        "team": "承認チーム",
+        "person": "鈴木"
+      },
+      "requires": ["Application.status = reviewed", "ApprovalAuthority(鈴木, Application) = true"],
+      "ensures": ["Application.status = approved", "ApprovalFact(Application, 鈴木) = true"],
+      "effects": [
+        {
+          "payload": { "kind": "domain-fact", "schema": "ApprovalResult" },
+          "delivery": {
+            "mode": "directed",
+            "target": {
+              "company": "あおい商事",
+              "department": "営業部",
+              "section": "営業一課",
+              "team": "見積チーム",
+              "person": "山田"
+            }
+          }
+        },
+        {
+          "payload": { "kind": "domain-fact", "schema": "ApprovalFact" },
+          "delivery": { "mode": "broadcast" }
+        }
+      ]
+    },
+    "archive_application": {
+      "id": "archive_application",
+      "name": "申請を保管する",
+      "input": "承認済み申請",
+      "output": "保管済み申請",
+      "status": "defined",
+      "responsibility": {
+        "company": "あおい商事",
+        "department": "総務部",
+        "section": "文書課",
+        "team": "記録チーム",
+        "person": "佐藤"
+      },
+      "requires": ["Application.status = approved"],
+      "ensures": ["Application.archived = true"]
+    }
+  },
+  "flows": [
+    { "from": "draft_application", "to": "submit_application" },
+    { "from": "submit_application", "to": "review_application" },
+    { "from": "review_application", "to": "approve_application" },
+    { "from": "approve_application", "to": "archive_application" }
+  ]
+}
