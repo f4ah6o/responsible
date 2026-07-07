@@ -122,15 +122,16 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 
 ## ドキュメント
 
-| ドキュメント                                                                                                    | 内容                                                                               |
-| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **規範的（normative）** な意味論: Activity、責任境界、Projection、RBNF、不変条件   |
-| [`docs/theory.md`](docs/theory.md)                                                                              | 理論的背景と、理論から実装への対応付け                                             |
-| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | リファレンス実装のスコープと依存ポリシー                                           |
-| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | DAG graph quotient projection の設計                                               |
-| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **規範的（normative）** な `responsible.v1` スキーマ設計（契約と作用）と段階的計画 |
-| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                   |
-| [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                 |
+| ドキュメント                                                                                                    | 内容                                                                                               |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **規範的（normative）** な意味論: Activity、責任境界、Projection、RBNF、不変条件                   |
+| [`docs/theory.md`](docs/theory.md)                                                                              | 理論的背景と、理論から実装への対応付け                                                             |
+| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | リファレンス実装のスコープと依存ポリシー                                                           |
+| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | DAG graph quotient projection の設計                                                               |
+| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **規範的（normative）** な `responsible.v1` スキーマ設計（契約と作用）と段階的計画                 |
+| [`docs/loops.md`](docs/loops.ja.md)                                                                             | **規範的（normative）** なループ（サイクル）射影の意味論——戻りエッジ、tau ループ規則——と段階的計画 |
+| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                                   |
+| [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                                 |
 
 ## アーキテクチャ
 
@@ -158,7 +159,7 @@ src/
 
 ## プロジェクトの状態
 
-バージョン `0.x` — API と JSON スキーマ(`responsible.v0` / `responsible.v1`)はマイナーバージョン間で変わる可能性がある。コアはセマンティックコアのうち検証可能なサブセットを実装している: 不変条件 `INV-1`–`INV-6`、plain data としての `Effect`、DAG 射影、そして `responsible.v1` では [`docs/responsible-v1.md`](docs/responsible-v1.md) に基づく契約の宣言と境界へ射影される作用。実行 API と逆射影 API は持たない。ループの意味論が定義されるまで、循環は拒否される。
+バージョン `0.x` — API と JSON スキーマ(`responsible.v0` / `responsible.v1`)はマイナーバージョン間で変わる可能性がある。コアはセマンティックコアのうち検証可能なサブセットを実装している: 不変条件 `INV-1`–`INV-6`、plain data としての `Effect`、DAG 射影、そして `responsible.v1` では [`docs/responsible-v1.md`](docs/responsible-v1.md) に基づく契約の宣言と境界へ射影される作用。実行 API と逆射影 API は持たない。ループ（サイクル）の意味論は [`docs/loops.md`](docs/loops.ja.md) で定義済みであり、その段階実装が入るまでプロジェクタは循環を拒否し続ける。
 
 主要な変更は [`CHANGES.md`](CHANGES.md) に記録している。
 

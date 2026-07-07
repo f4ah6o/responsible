@@ -132,6 +132,8 @@ Normal form terminology applies only when the projection also selects a minimize
 
 Current v0 only supports linear flows. In v0, RBNF is reduced to continuous `tau` collapse for same-boundary runs. It is not general weak bisimulation minimization for branching, merging, or parallel graphs.
 
+For Activity graphs with cycles, the RBNF extension — the quotient rule unchanged, with a canonical order and a forward/return edge classification as the representative selection — is normatively defined in [`docs/loops.md`](loops.md).
+
 ## Effect model
 
 An Effect is not a mutation. A mutation is an internal data change caused by an Activity. An Effect is the observable result of an Activity crossing a Responsibility Boundary.

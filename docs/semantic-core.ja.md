@@ -132,6 +132,8 @@ normal form という用語は、projection が等価類の最小化された代
 
 現在の v0 は線形フローのみをサポートする。v0 では、RBNF は同一境界の連続実行に対する continuous な `tau` collapse に還元されている。分岐、合流、あるいは並列グラフに対する一般的な weak bisimulation の最小化ではない。
 
+サイクルを含む Activity グラフに対する RBNF の拡張——quotient 規則は変更せず、正準順序と前進/戻りエッジ分類を代表の選択として加える——は [`docs/loops.md`](loops.ja.md) が規範として定義する。
+
 ## Effect モデル
 
 Effect は mutation ではない。Mutation は Activity によって引き起こされる内部的なデータの変更である。Effect は、Activity が Responsibility Boundary を越えたことによる観測可能な結果である。
