@@ -220,6 +220,22 @@ button {
   font-weight: 700;
 }
 
+.export-control {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+.export-error {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 .fatal-error {
   display: grid;
   gap: 12px;

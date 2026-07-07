@@ -22,7 +22,8 @@ import type {
   ViewDef,
 } from "../model.js";
 import { sampleProcesses, type SampleProcess } from "../sample.js";
-import { BoundaryZoomControl } from "./BoundaryZoomControl";
+import { BoundaryZoomControl, boundaryLabelFor } from "./BoundaryZoomControl";
+import { ExportControl } from "./ExportControl";
 import { FlowCanvas } from "./FlowCanvas";
 import { SizeReportContext, type MeasuredSize } from "./SizeReportContext";
 import { ModelLoader } from "./ModelLoader";
@@ -170,6 +171,7 @@ export function ProcessViewer() {
   const [selectedLeafId, setSelectedLeafId] = useState<Id | undefined>(() =>
     firstLeafId(initialProcess.model, initialProcess.rootActivityId),
   );
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   const sample = processes.find((process) => process.id === processId) ?? processes[0]!;
   const model = sample.model;
@@ -365,6 +367,7 @@ export function ProcessViewer() {
     <SizeReportContext.Provider value={handleSizeMeasured}>
       <main className="shell">
         <FlowCanvas
+          ref={canvasRef}
           nodes={flow.nodes}
           edges={flow.edges}
           onNodeClick={handleNodeClick}
@@ -410,6 +413,12 @@ export function ProcessViewer() {
                 error={scopeError}
               />
               <ModelLoader onLoadFile={handleLoadFile} error={importError} />
+              <ExportControl
+                containerRef={canvasRef}
+                processName={sample.title}
+                boundaryLabel={boundaryLabelFor(zoomLevel)}
+                disabled={Boolean(projection.error)}
+              />
               {effects && effects.length > 0 && (
                 <span className="effect-legend">
                   <span className="legend-dash" aria-hidden="true" />

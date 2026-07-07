@@ -69,6 +69,7 @@ The viewer ships with bundled sample processes (software development, document p
 2. Click **“JSON を読み込む”** (Load JSON) in the toolbar.
 3. Use **boundary zoom** to move between organizational levels, **drill-down** to open an Activity's decomposition, and viewport pan/zoom to navigate the canvas.
 4. Share the URL — `#p=…&z=…&s=…` encodes the process, zoom level, and scope (the imported JSON itself is not embedded in the URL).
+5. Click **SVG** or **PNG** in the toolbar to export the current view (current boundary zoom, drill-down scope, and composite expansion) as a file named `{process name}-{boundary level}.{svg|png}`. PNG exports at `pixelRatio: 2` for crisp text. Export is disabled while the scope's error panel is showing.
 
 Invalid models are reported with JSON-path error messages. Models containing cycles load, but affected scopes display an error panel instead of a diagram.
 
@@ -151,7 +152,7 @@ src/
   __tests__/     node:test suites (invariants, projection, zoom, validation)
 ```
 
-The **projection core** (everything outside `src/viewer/`) is dependency-free. Only the viewer depends on React and `@xyflow/react`. DSL parsing, persistence, and execution runtimes are intentionally downstream layers, out of scope for this repository.
+The **projection core** (everything outside `src/viewer/`) is dependency-free. Only the viewer depends on React, `@xyflow/react`, and `html-to-image` (SVG/PNG export). DSL parsing, persistence, and execution runtimes are intentionally downstream layers, out of scope for this repository.
 
 ### Non-goals
 
