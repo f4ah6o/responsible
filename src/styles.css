@@ -220,6 +220,43 @@ button {
   font-weight: 700;
 }
 
+.import-error-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b91c1c;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+.import-error-item button {
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.share-status {
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.share-status-ok {
+  color: #15803d;
+}
+.share-status-error {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b91c1c;
+}
+
 .export-control {
   display: flex;
   flex-shrink: 0;
