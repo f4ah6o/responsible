@@ -90,6 +90,35 @@ if (!result.ok) {
 
 The core is not yet published to npm; use it in-repo or vendor `src/` (everything is re-exported from [`src/index.ts`](src/index.ts)).
 
+## Authoring models
+
+JSON Schema (draft 2020-12) files for `responsible.v0` / `responsible.v1` are published from [`schemas/`](schemas/) at `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` and `…/responsible.v1.schema.json`, so editors can offer key completion and inline validation while you hand-write a model.
+
+Add a `$schema` field to your model JSON and VSCode's built-in JSON language support picks it up automatically:
+
+```json
+{
+  "$schema": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+  "schemaVersion": "responsible.v1",
+  "activities": { ... }
+}
+```
+
+Alternatively, map file patterns to a schema in VSCode's `settings.json` without editing every file:
+
+```jsonc
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["*.responsible.json"],
+      "url": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+    },
+  ],
+}
+```
+
+The schemas are an editor-support aid, not the source of truth: they are hand-written (not generated) from [`src/model.ts`](src/model.ts) and are stricter than the runtime validator on unknown keys, but they don't express referential checks like `ActivityDef.id` matching its key, `flows` endpoints resolving, or decomposition-cycle detection — `validateProcessModel` (see below) remains authoritative. A `$schema` property is always accepted and ignored by `validateProcessModel`.
+
 ## Model schema (`responsible.v0`)
 
 ```ts
