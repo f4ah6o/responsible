@@ -122,15 +122,16 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 
 ## ドキュメント
 
-| ドキュメント                                                                                                    | 内容                                                                               |
-| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **規範的（normative）** な意味論: Activity、責任境界、Projection、RBNF、不変条件   |
-| [`docs/theory.md`](docs/theory.md)                                                                              | 理論的背景と、理論から実装への対応付け                                             |
-| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | リファレンス実装のスコープと依存ポリシー                                           |
-| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | DAG graph quotient projection の設計                                               |
-| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **規範的（normative）** な `responsible.v1` スキーマ設計（契約と作用）と段階的計画 |
-| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                   |
-| [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                 |
+| ドキュメント                                                                                                    | 内容                                                                                              |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **規範的（normative）** な意味論: Activity、責任境界、Projection、RBNF、不変条件                  |
+| [`docs/theory.md`](docs/theory.md)                                                                              | 理論的背景と、理論から実装への対応付け                                                            |
+| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | リファレンス実装のスコープと依存ポリシー                                                          |
+| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | DAG graph quotient projection の設計                                                              |
+| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **規範的（normative）** な `responsible.v1` スキーマ設計（契約と作用）と段階的計画                |
+| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                                  |
+| [`docs/workflow-discovery.md`](docs/workflow-discovery.md)                                                      | **規範的（normative）** な実務レベルの発見: `tool` 境界レベル、`responsible.oplog.v0`、段階的計画 |
+| [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                                |
 
 ## アーキテクチャ
 
