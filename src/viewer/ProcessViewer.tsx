@@ -26,11 +26,79 @@ import { BoundaryZoomControl } from "./BoundaryZoomControl";
 import { FlowCanvas } from "./FlowCanvas";
 import { SizeReportContext, type MeasuredSize } from "./SizeReportContext";
 import { ModelLoader } from "./ModelLoader";
-import { ProcessSelect } from "./ProcessSelect";
+import { ProcessSelect, type ProcessSelectErrorEntry } from "./ProcessSelect";
 import { projectionToFlow } from "./projectionToFlow";
-import { readViewerUrlState, writeViewerUrlState } from "./urlState";
+import {
+  decodeModelParam,
+  encodeModelParam,
+  readViewerUrlState,
+  writeViewerUrlState,
+} from "./urlState";
+import {
+  addStoredImportedModel,
+  loadStoredImportedModels,
+  removeStoredImportedModel,
+} from "./storage";
 
 const DEFAULT_ZOOM_LEVEL = 1;
+const IMPORTED_ID_PREFIX = "imported:";
+const SHARE_URL_LENGTH_LIMIT = 8000;
+
+type ShareStatus =
+  | Readonly<{ kind: "copied" }>
+  | Readonly<{ kind: "error"; message: string }>
+  | undefined;
+
+type ImportOutcome =
+  | Readonly<{ ok: true; process: SampleProcess; json: string }>
+  | Readonly<{ ok: false; error: string }>;
+
+function buildImportedProcess(json: string, titleHint: string): ImportOutcome {
+  const result = parseProcessModelJson(json);
+  if (!result.ok) {
+    const shown = result.issues
+      .slice(0, 3)
+      .map((issue) => `${issue.path}: ${issue.message}`)
+      .join(" / ");
+    const rest = result.issues.length - 3;
+    return {
+      ok: false,
+      error: `${titleHint} を読み込めませんでした — ${shown}${rest > 0 ? ` ほか${rest}件` : ""}`,
+    };
+  }
+
+  const rooted = ensureRootActivity(result.model);
+  const process: SampleProcess = {
+    id: `${IMPORTED_ID_PREFIX}${titleHint}:${Date.now()}`,
+    title: `${titleHint}（読み込み）`,
+    rootActivityId: rooted.rootActivityId,
+    model: rooted.model,
+  };
+  return { ok: true, process, json };
+}
+
+function hydratePersistedProcesses(): {
+  processes: readonly SampleProcess[];
+  errors: readonly ProcessSelectErrorEntry[];
+} {
+  const processes: SampleProcess[] = [];
+  const errors: ProcessSelectErrorEntry[] = [];
+  for (const stored of loadStoredImportedModels()) {
+    const result = parseProcessModelJson(stored.json);
+    if (!result.ok) {
+      errors.push({ id: stored.id, title: stored.title });
+      continue;
+    }
+    const rooted = ensureRootActivity(result.model);
+    processes.push({
+      id: stored.id,
+      title: stored.title,
+      rootActivityId: rooted.rootActivityId,
+      model: rooted.model,
+    });
+  }
+  return { processes, errors };
+}
 
 function sourceIdsOf(activity: ProjectedActivity): readonly Id[] {
   return activity.kind === "atomic" ? [activity.activityId] : activity.activityIds;
@@ -143,12 +211,23 @@ function ScopeControl({
 
 const initialUrlState = readViewerUrlState(typeof window === "undefined" ? "" : location.hash);
 
+const { processes: initialPersistedProcesses, errors: initialImportErrors } =
+  hydratePersistedProcesses();
+const initialProcesses: readonly SampleProcess[] = [
+  ...sampleProcesses,
+  ...initialPersistedProcesses,
+];
+
+// A `#m=` link carries its own model and is decoded asynchronously after
+// mount, so it always overrides `#p=` — the initial synchronous render just
+// shows a placeholder process until the decode effect swaps it in.
 const initialProcess: SampleProcess =
-  sampleProcesses.find((process) => process.id === initialUrlState.processId) ??
-  sampleProcesses[0]!;
+  (!initialUrlState.modelParam &&
+    initialProcesses.find((process) => process.id === initialUrlState.processId)) ||
+  initialProcesses[0]!;
 
 export function ProcessViewer() {
-  const [processes, setProcesses] = useState<readonly SampleProcess[]>(sampleProcesses);
+  const [processes, setProcesses] = useState<readonly SampleProcess[]>(initialProcesses);
   const [processId, setProcessId] = useState(initialProcess.id);
   const [zoomLevel, setZoomLevel] = useState(() =>
     initialUrlState.zoomLevel === undefined
@@ -156,12 +235,18 @@ export function ProcessViewer() {
       : clampZoomLevel(initialUrlState.zoomLevel),
   );
   const [scopePath, setScopePath] = useState<readonly Id[]>(() =>
-    initialUrlState.processId === initialProcess.id && initialUrlState.scopePath
+    !initialUrlState.modelParam &&
+    initialUrlState.processId === initialProcess.id &&
+    initialUrlState.scopePath
       ? initialUrlState.scopePath
       : [initialProcess.rootActivityId],
   );
   const [scopeError, setScopeError] = useState<string | undefined>();
   const [importError, setImportError] = useState<string | undefined>();
+  const [importErrors, setImportErrors] =
+    useState<readonly ProcessSelectErrorEntry[]>(initialImportErrors);
+  const [sharedModelError, setSharedModelError] = useState<string | undefined>();
+  const [shareStatus, setShareStatus] = useState<ShareStatus>();
   // Lane frames always follow measured card sizes (ResizeObserver): an expanded
   // composite grows its lane's height, and the canvas widens when a fold needs
   // more sideways room than the flow grid provides.
@@ -232,10 +317,59 @@ export function ProcessViewer() {
     history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
   }, [processId, zoomLevel, scopeKey]);
 
+  useEffect(() => {
+    if (!shareStatus) return;
+    const timer = setTimeout(
+      () => setShareStatus(undefined),
+      shareStatus.kind === "copied" ? 2000 : 6000,
+    );
+    return () => clearTimeout(timer);
+  }, [shareStatus]);
+
   const resetSizes = useCallback(() => {
     setMeasuredSizes(new Map());
     pendingSizes.current = new Map();
   }, []);
+
+  // `#m=` links carry the model itself; decode it once after mount and swap
+  // it in, overriding the placeholder process the synchronous initial render
+  // picked. A broken value surfaces as an in-place error rather than a blank
+  // canvas.
+  useEffect(() => {
+    const modelParam = initialUrlState.modelParam;
+    if (!modelParam) return;
+    let cancelled = false;
+    decodeModelParam(modelParam)
+      .then((json) => {
+        if (cancelled) return;
+        const outcome = buildImportedProcess(json, "共有モデル");
+        if (!outcome.ok) {
+          setSharedModelError(outcome.error);
+          return;
+        }
+        addStoredImportedModel({
+          id: outcome.process.id,
+          title: outcome.process.title,
+          json: outcome.json,
+          importedAt: Date.now(),
+        });
+        setProcesses((prev) => [...prev, outcome.process]);
+        setProcessId(outcome.process.id);
+        const scope = initialUrlState.scopePath;
+        setScopePath(scope && scope.length > 0 ? scope : [outcome.process.rootActivityId]);
+        setSelectedLeafId(firstLeafId(outcome.process.model, outcome.process.rootActivityId));
+        resetSizes();
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setSharedModelError(
+          `共有リンクのモデルを読み込めませんでした — ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resetSizes]);
 
   const handleSizeMeasured = useCallback((id: string, size: MeasuredSize) => {
     pendingSizes.current.set(id, size);
@@ -284,30 +418,21 @@ export function ProcessViewer() {
       file
         .text()
         .then((text) => {
-          const result = parseProcessModelJson(text);
-          if (!result.ok) {
-            const shown = result.issues
-              .slice(0, 3)
-              .map((issue) => `${issue.path}: ${issue.message}`)
-              .join(" / ");
-            const rest = result.issues.length - 3;
-            setImportError(
-              `${file.name} を読み込めませんでした — ${shown}${rest > 0 ? ` ほか${rest}件` : ""}`,
-            );
+          const title = file.name.replace(/\.json$/i, "") || file.name;
+          const outcome = buildImportedProcess(text, title);
+          if (!outcome.ok) {
+            setImportError(outcome.error);
             return;
           }
-
-          const rooted = ensureRootActivity(result.model);
-          const title = file.name.replace(/\.json$/i, "") || file.name;
-          const imported: SampleProcess = {
-            id: `imported:${title}:${Date.now()}`,
-            title: `${title}（読み込み）`,
-            rootActivityId: rooted.rootActivityId,
-            model: rooted.model,
-          };
-          setProcesses((prev) => [...prev, imported]);
+          addStoredImportedModel({
+            id: outcome.process.id,
+            title: outcome.process.title,
+            json: outcome.json,
+            importedAt: Date.now(),
+          });
+          setProcesses((prev) => [...prev, outcome.process]);
           setImportError(undefined);
-          selectProcess(imported);
+          selectProcess(outcome.process);
         })
         .catch((error: unknown) => {
           setImportError(
@@ -317,6 +442,61 @@ export function ProcessViewer() {
     },
     [selectProcess],
   );
+
+  const handleDeleteImported = useCallback(() => {
+    removeStoredImportedModel(sample.id);
+    setImportErrors((prev) => prev.filter((entry) => entry.id !== sample.id));
+    setProcesses((prev) => prev.filter((process) => process.id !== sample.id));
+    selectProcess(sampleProcesses[0]!);
+  }, [sample.id, selectProcess]);
+
+  const handleDeleteImportError = useCallback((id: string) => {
+    removeStoredImportedModel(id);
+    setImportErrors((prev) => prev.filter((entry) => entry.id !== id));
+  }, []);
+
+  const handleCopyShareLink = useCallback(async () => {
+    let modelParam: string | undefined;
+    if (sample.id.startsWith(IMPORTED_ID_PREFIX)) {
+      const stored = loadStoredImportedModels().find((item) => item.id === sample.id);
+      const json = stored?.json ?? JSON.stringify(sample.model);
+      try {
+        modelParam = await encodeModelParam(json);
+      } catch (error) {
+        setShareStatus({
+          kind: "error",
+          message: `共有リンクを生成できませんでした — ${error instanceof Error ? error.message : String(error)}`,
+        });
+        return;
+      }
+    }
+
+    const hash = writeViewerUrlState({
+      processId: sample.id,
+      zoomLevel,
+      scopePath: validScopePath,
+      ...(modelParam ? { modelParam } : {}),
+    });
+    const url = `${location.origin}${location.pathname}${location.search}${hash}`;
+
+    if (url.length > SHARE_URL_LENGTH_LIMIT) {
+      setShareStatus({
+        kind: "error",
+        message: "モデルが大きすぎて URL 共有できません。JSON ファイルを直接共有してください。",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareStatus({ kind: "copied" });
+    } catch (error) {
+      setShareStatus({
+        kind: "error",
+        message: `クリップボードにコピーできませんでした — ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }, [sample, zoomLevel, validScopePath]);
 
   const handleSelectAncestor = useCallback(
     (index: number) => {
@@ -369,10 +549,12 @@ export function ProcessViewer() {
           edges={flow.edges}
           onNodeClick={handleNodeClick}
           overlay={
-            projection.error && (
+            (sharedModelError || projection.error) && (
               <div className="projection-error" role="alert">
-                <strong>このスコープは表示できません</strong>
-                <p>{projection.error}</p>
+                <strong>
+                  {sharedModelError ? "共有リンクを読み込めません" : "このスコープは表示できません"}
+                </strong>
+                <p>{sharedModelError ?? projection.error}</p>
               </div>
             )
           }
@@ -396,7 +578,25 @@ export function ProcessViewer() {
                 processes={processes}
                 value={sample.id}
                 onChange={handleProcessChange}
+                errors={importErrors}
               />
+              {sample.id.startsWith(IMPORTED_ID_PREFIX) && (
+                <button type="button" className="secondary-action" onClick={handleDeleteImported}>
+                  このモデルを削除
+                </button>
+              )}
+              {importErrors.map((entry) => (
+                <span key={entry.id} className="import-error-item" role="alert">
+                  {entry.title}（読み込みエラー）
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteImportError(entry.id)}
+                    aria-label={`${entry.title} を削除`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
               <BoundaryZoomControl
                 level={zoomLevel}
                 onZoomIn={handleZoomIn}
@@ -410,6 +610,17 @@ export function ProcessViewer() {
                 error={scopeError}
               />
               <ModelLoader onLoadFile={handleLoadFile} error={importError} />
+              <button type="button" className="secondary-action" onClick={handleCopyShareLink}>
+                共有リンクをコピー
+              </button>
+              {shareStatus?.kind === "copied" && (
+                <span className="share-status share-status-ok">コピーしました</span>
+              )}
+              {shareStatus?.kind === "error" && (
+                <span className="share-status share-status-error" role="alert">
+                  {shareStatus.message}
+                </span>
+              )}
               {effects && effects.length > 0 && (
                 <span className="effect-legend">
                   <span className="legend-dash" aria-hidden="true" />

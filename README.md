@@ -36,8 +36,8 @@ One model, written once at the finest granularity you know, produces consistent 
 - **Hierarchical drill-down** — Activities nest arbitrarily; a parent is the composition of its children. Drill into any decomposition scope independently of boundary zoom.
 - **Interactive viewer** — single-screen React Flow viewer with Activity nodes, responsibility lanes, cross-boundary edges, and nested lane layout.
 - **Contracts and effects (`responsible.v1`)** — declare `requires` / `ensures` / `effects` on Activities. Declared effects render as node badges and dashed edges to the target boundary's lane, and hide/appear with boundary zoom under the same rule that collapses same-boundary flows.
-- **Bring your own model** — load any `responsible.v0` / `responsible.v1` JSON file from the toolbar. Structural validation reports issues with JSON paths; flat models are automatically wrapped in a synthetic root.
-- **Shareable URLs** — process, boundary zoom level, and drill-down scope sync to the URL hash, so a link reproduces the exact view.
+- **Bring your own model** — load any `responsible.v0` / `responsible.v1` JSON file from the toolbar. Structural validation reports issues with JSON paths; flat models are automatically wrapped in a synthetic root. Imported models persist in `localStorage` and survive a reload; they can be removed from the toolbar.
+- **Shareable URLs** — process, boundary zoom level, and drill-down scope sync to the URL hash, so a link reproduces the exact view. For an imported model, "Copy share link" compresses the model itself into the URL (`#m=`) so anyone opening the link sees the same diagram, no upload required.
 - **Crash resilience** — a top-level error boundary and in-place error panels; unsupported models show a message instead of a blank screen.
 
 ## Quick start
@@ -66,11 +66,11 @@ pnpm run preview    # preview the production build
 The viewer ships with bundled sample processes (software development, document publishing, AI agent execution, a branching/merging estimate approval flow, and a `responsible.v1` application approval flow with contracts and effects). To view your own process:
 
 1. Write a `responsible.v0` or `responsible.v1` JSON model — start from [`examples/order-fulfillment.json`](examples/order-fulfillment.json) (v0, a six-Activity order-to-invoice process) or [`examples/application-approval.v1.json`](examples/application-approval.v1.json) (v1, with `requires` / `ensures` / `effects`).
-2. Click **“JSON を読み込む”** (Load JSON) in the toolbar.
+2. Click **“JSON を読み込む”** (Load JSON) in the toolbar. The imported model is saved to `localStorage` and stays in the process list — including after a reload — until you remove it with **“このモデルを削除”** (Delete this model).
 3. Use **boundary zoom** to move between organizational levels, **drill-down** to open an Activity's decomposition, and viewport pan/zoom to navigate the canvas.
-4. Share the URL — `#p=…&z=…&s=…` encodes the process, zoom level, and scope (the imported JSON itself is not embedded in the URL).
+4. Share the URL with **“共有リンクをコピー”** (Copy share link). For a bundled sample, `#p=…&z=…&s=…` encodes the process, zoom level, and scope. For an imported model, the model itself is deflate-compressed and embedded as `#m=…&z=…&s=…`, so opening the link in another browser reproduces the exact diagram without needing the original JSON file. Very large models are rejected with an in-toolbar warning instead of producing an unusable URL.
 
-Invalid models are reported with JSON-path error messages. Models containing cycles load, but affected scopes display an error panel instead of a diagram.
+Invalid models are reported with JSON-path error messages. Models containing cycles load, but affected scopes display an error panel instead of a diagram. A corrupted `#m=` value (e.g. a hand-edited link) shows the same kind of error panel rather than a blank screen; a persisted model that fails to re-validate (e.g. after a future schema change) is listed as unselectable with a "読み込みエラー" (load error) marker and can be removed from the toolbar.
 
 ## Using the core
 
