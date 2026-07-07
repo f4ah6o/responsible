@@ -38,6 +38,21 @@ const ja = {
   hideMembers: "▾ 内訳を隠す",
   showMembers: "▸ 内訳を表示（{count}）",
   localeToggleAriaLabel: "表示言語",
+  deleteImportedModel: "このモデルを削除",
+  loadErrorOption: "{title}（読み込みエラー）",
+  deleteImportErrorAriaLabel: "{title} を削除",
+  copyShareLink: "共有リンクをコピー",
+  shareCopied: "コピーしました",
+  shareLoadingError: "共有リンクのモデルを読み込み中です。少し待ってからもう一度お試しください。",
+  shareGenerateError: "共有リンクを生成できませんでした — {message}",
+  shareTooLargeError:
+    "モデルが大きすぎて URL 共有できません。JSON ファイルを直接共有してください。",
+  shareClipboardError: "クリップボードにコピーできませんでした — {message}",
+  sharedModelUnavailable: "共有リンクを読み込めません",
+  sharedModelLoadError: "共有リンクのモデルを読み込めませんでした — {message}",
+  sharedModelTitle: "共有モデル",
+  exportAriaLabel: "図のエクスポート",
+  exporting: "出力中…",
 } as const;
 
 export type MessageKey = keyof typeof ja;
@@ -79,6 +94,21 @@ const en: Record<MessageKey, string> = {
   hideMembers: "▾ Hide breakdown",
   showMembers: "▸ Show breakdown ({count})",
   localeToggleAriaLabel: "Display language",
+  deleteImportedModel: "Delete this model",
+  loadErrorOption: "{title} (load error)",
+  deleteImportErrorAriaLabel: "Delete {title}",
+  copyShareLink: "Copy share link",
+  shareCopied: "Copied",
+  shareLoadingError: "The shared model is still loading. Please wait a moment and try again.",
+  shareGenerateError: "Could not generate a share link — {message}",
+  shareTooLargeError:
+    "The model is too large to share via URL. Please share the JSON file directly.",
+  shareClipboardError: "Could not copy to clipboard — {message}",
+  sharedModelUnavailable: "Cannot load the shared link",
+  sharedModelLoadError: "Could not load the shared model — {message}",
+  sharedModelTitle: "Shared model",
+  exportAriaLabel: "Export diagram",
+  exporting: "Exporting…",
 };
 
 const messages = { ja, en } satisfies Record<Locale, Record<MessageKey, string>>;

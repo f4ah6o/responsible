@@ -36,8 +36,8 @@ ProcessView = normalize(project(ActivityGraph, boundary))
 - **階層 drill-down** — Activity は無限に入れ子にでき、親は子の合成である。boundary zoom とは独立に、任意の分解スコープへ drill-down できる。
 - **インタラクティブなビューア** — Activity ノード、責任境界レーン、境界間エッジ、入れ子レーンレイアウトを備えた単一画面の React Flow ビューア。
 - **契約と作用(`responsible.v1`)** — Activity に `requires` / `ensures` / `effects` を宣言できる。宣言された effect はノード上のバッジと target 境界レーンへの破線エッジとして描画され、同一境界フローを合成するのと同じ規則で boundary zoom に応じて現れたり隠れたりする。
-- **自分のモデルを表示** — ツールバーから任意の `responsible.v0` / `responsible.v1` JSON ファイルを読み込める。構造検証が JSON パス付きで問題を報告し、フラットなモデルは自動的に合成ルートで包まれる。
-- **共有可能な URL** — プロセス・boundary zoom レベル・drill-down スコープが URL ハッシュに同期されるため、リンクだけで同じ View を再現できる。
+- **自分のモデルを表示** — ツールバーから任意の `responsible.v0` / `responsible.v1` JSON ファイルを読み込める。構造検証が JSON パス付きで問題を報告し、フラットなモデルは自動的に合成ルートで包まれる。読み込んだモデルは `localStorage` に永続化され、リロードしても一覧に残る。ツールバーから削除もできる。
+- **共有可能な URL** — プロセス・boundary zoom レベル・drill-down スコープが URL ハッシュに同期されるため、リンクだけで同じ View を再現できる。読み込みモデルの場合は「共有リンクをコピー」でモデル本体を圧縮して URL(`#m=`)に埋め込むため、JSON ファイルを渡さなくても別のブラウザで同じ図を開ける。
 - **クラッシュ耐性** — トップレベルのエラーバウンダリとその場のエラーパネルにより、未対応のモデルでも空白画面にならずメッセージが表示される。
 
 ## クイックスタート
@@ -66,11 +66,12 @@ pnpm run preview    # 本番ビルドのプレビュー
 ビューアにはサンプルプロセス(ソフトウェア開発、ドキュメント出版、AI エージェント実行、分岐・合流のある見積承認フロー、契約と作用を宣言した `responsible.v1` の申請承認フロー)が同梱されている。自分のプロセスを表示するには:
 
 1. `responsible.v0` または `responsible.v1` の JSON モデルを書く。[`examples/order-fulfillment.json`](examples/order-fulfillment.json)(v0、受注〜請求の 6 Activity)か [`examples/application-approval.v1.json`](examples/application-approval.v1.json)(v1、`requires` / `ensures` / `effects` 付き)から始めるとよい。
-2. ツールバーの **「JSON を読み込む」** をクリックする。
+2. ツールバーの **「JSON を読み込む」** をクリックする。読み込んだモデルは `localStorage` に保存され、リロード後もプロセス一覧に残る。不要になったら **「このモデルを削除」** で削除できる。
 3. **boundary zoom** で組織レベルを移動し、**drill-down** で Activity の分解を開き、viewport pan / zoom でキャンバスを操作する。
-4. URL を共有する。`#p=…&z=…&s=…` がプロセス・ズームレベル・スコープを表す(読み込んだ JSON 自体は URL に含まれない)。
+4. **「共有リンクをコピー」** で URL を共有する。バンドル済みサンプルなら `#p=…&z=…&s=…` がプロセス・ズームレベル・スコープを表す。読み込みモデルの場合はモデル本体を deflate 圧縮して `#m=…&z=…&s=…` に埋め込むため、別のブラウザでリンクを開くだけで元の JSON ファイルなしに同じ図が再現される。モデルが大きすぎる場合はコピーを中止し、ツールバーに警告を表示する。
+5. ツールバーの **SVG** / **PNG** をクリックすると、現在の表示(境界ズーム・ドリルダウン・composite 展開を反映)を `{プロセス名}-{境界レベル}.{svg|png}` というファイル名でエクスポートできる。PNG は `pixelRatio: 2` で出力され、文字が滲まない。エラーパネル表示中はエクスポートボタンが無効になる。
 
-不正なモデルは JSON パス付きのエラーメッセージで報告される。循環を含むモデルは読み込めるが、該当スコープには図の代わりにエラーパネルが表示される。
+不正なモデルは JSON パス付きのエラーメッセージで報告される。循環を含むモデルは読み込めるが、該当スコープには図の代わりにエラーパネルが表示される。壊れた `#m=` 値(手で改変したリンクなど)も同様にエラーパネルを表示し、白画面にはならない。再検証に失敗した永続化モデル(将来のスキーマ変更など)は一覧に「読み込みエラー」として表示され、選択できない。ツールバーから削除できる。
 
 UI はツールバーの **JA / EN** トグル(`src/viewer/i18n.ts`)で日本語・英語を切り替えられる。初期言語はブラウザの言語設定に従い、選択後は `localStorage` に保存される。Activity 名・responsibility 値・サンプルプロセス名などのモデルデータは翻訳対象外である。
 
@@ -91,6 +92,35 @@ if (!result.ok) {
 ```
 
 コアはまだ npm に公開していない。リポジトリ内で使うか、`src/` を vendor すること(すべて [`src/index.ts`](src/index.ts) から re-export されている)。
+
+## モデルを書く(エディタ支援)
+
+`responsible.v0` / `responsible.v1` の JSON Schema(draft 2020-12)を [`schemas/`](schemas/) から `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` / `…/responsible.v1.schema.json` として配信している。モデル JSON を手書きする際、エディタでのキー補完とインライン検証に使える。
+
+モデル JSON に `$schema` フィールドを書くだけで、VSCode の組み込み JSON 言語サポートが自動的に読み込む:
+
+```json
+{
+  "$schema": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+  "schemaVersion": "responsible.v1",
+  "activities": { ... }
+}
+```
+
+あるいは VSCode の `settings.json` でファイルパターンにスキーマを紐付ければ、各ファイルを編集せずに済む:
+
+```jsonc
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["*.responsible.json"],
+      "url": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+    },
+  ],
+}
+```
+
+この Schema はエディタ支援のための補助であり、正ではない: [`src/model.ts`](src/model.ts) から手書きで作成しており、未知キーについてはランタイムのバリデータより厳格だが、`ActivityDef.id` がキーと一致すること・`flows` の参照先が解決すること・分解階層の循環がないことといった参照整合性チェックは表現していない — 引き続き `validateProcessModel`(後述)が正である。`$schema` プロパティは常に許容され、`validateProcessModel` はこれを無視する。
 
 ## モデルスキーマ(`responsible.v0`)
 
@@ -153,7 +183,7 @@ src/
   __tests__/     node:test スイート（不変条件、射影、ズーム、検証）
 ```
 
-**射影コア**(`src/viewer/` 以外のすべて)は依存ゼロである。React と `@xyflow/react` に依存するのはビューアのみ。DSL パース、永続化、実行ランタイムは意図的に下流レイヤーとし、このリポジトリのスコープ外とする。
+**射影コア**(`src/viewer/` 以外のすべて)は依存ゼロである。React、`@xyflow/react`、`html-to-image`(SVG/PNG エクスポート)に依存するのはビューアのみ。DSL パース、永続化、実行ランタイムは意図的に下流レイヤーとし、このリポジトリのスコープ外とする。
 
 ### 非目標
 

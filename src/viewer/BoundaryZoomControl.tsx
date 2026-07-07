@@ -1,5 +1,5 @@
 import { HIERARCHICAL_BOUNDARY_ORDER, canZoomIn, canZoomOut } from "../index.js";
-import { useI18n, type MessageKey } from "./i18n";
+import { useI18n, type I18n, type MessageKey } from "./i18n";
 
 export type BoundaryZoomControlProps = {
   level: number;
@@ -15,11 +15,15 @@ const BOUNDARY_LABEL_KEYS: Record<string, MessageKey> = {
   person: "boundaryPerson",
 };
 
-export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoomControlProps) {
-  const { t } = useI18n();
+export function boundaryLabelFor(level: number, t: I18n["t"]): string {
   const key = HIERARCHICAL_BOUNDARY_ORDER[level] ?? "—";
   const labelKey = BOUNDARY_LABEL_KEYS[key];
-  const label = labelKey ? t(labelKey) : key;
+  return labelKey ? t(labelKey) : key;
+}
+
+export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoomControlProps) {
+  const { t } = useI18n();
+  const label = boundaryLabelFor(level, t);
   const ordinal = level + 1;
   const total = HIERARCHICAL_BOUNDARY_ORDER.length;
   const canIn = canZoomIn(level);

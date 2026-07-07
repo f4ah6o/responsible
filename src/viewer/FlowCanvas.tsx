@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -6,6 +6,7 @@ import {
   Handle,
   Position,
   ReactFlow,
+  ReactFlowProvider,
   type Edge,
   type Node,
   type NodeProps,
@@ -46,37 +47,37 @@ export type FlowCanvasProps = {
   notice?: React.ReactNode;
 };
 
-export function FlowCanvas({
-  nodes,
-  edges,
-  onNodeClick,
-  toolbar,
-  overlay,
-  notice,
-}: FlowCanvasProps) {
+export const FlowCanvas = forwardRef<HTMLDivElement, FlowCanvasProps>(function FlowCanvas(
+  { nodes, edges, onNodeClick, toolbar, overlay, notice },
+  ref,
+) {
   return (
-    <div className="flow-canvas">
-      {toolbar && <div className="flow-toolbar">{toolbar}</div>}
-      <div className="flow-body">
-        {overlay && <div className="flow-overlay">{overlay}</div>}
-        {notice && <div className="flow-notice">{notice}</div>}
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodeClick={(_event, node) => onNodeClick(node.id)}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          fitView
-          fitViewOptions={{ padding: 0.15, includeHiddenNodes: false }}
-          minZoom={0.2}
-          maxZoom={2}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={24} />
-          <Controls showInteractive={false} />
-        </ReactFlow>
+    // Wraps toolbar + canvas so a toolbar child (e.g. ExportControl) can call
+    // useReactFlow() even though it renders as a sibling of <ReactFlow>.
+    <ReactFlowProvider>
+      <div className="flow-canvas" ref={ref}>
+        {toolbar && <div className="flow-toolbar">{toolbar}</div>}
+        <div className="flow-body">
+          {overlay && <div className="flow-overlay">{overlay}</div>}
+          {notice && <div className="flow-notice">{notice}</div>}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodeClick={(_event, node) => onNodeClick(node.id)}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            fitView
+            fitViewOptions={{ padding: 0.15, includeHiddenNodes: false }}
+            minZoom={0.2}
+            maxZoom={2}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={24} />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        </div>
       </div>
-    </div>
+    </ReactFlowProvider>
   );
-}
+});
