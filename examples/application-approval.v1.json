@@ -1,4 +1,5 @@
 {
+  "$schema": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
   "schemaVersion": "responsible.v1",
   "activities": {
     "draft_application": {

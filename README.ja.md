@@ -90,6 +90,35 @@ if (!result.ok) {
 
 コアはまだ npm に公開していない。リポジトリ内で使うか、`src/` を vendor すること(すべて [`src/index.ts`](src/index.ts) から re-export されている)。
 
+## モデルを書く(エディタ支援)
+
+`responsible.v0` / `responsible.v1` の JSON Schema(draft 2020-12)を [`schemas/`](schemas/) から `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` / `…/responsible.v1.schema.json` として配信している。モデル JSON を手書きする際、エディタでのキー補完とインライン検証に使える。
+
+モデル JSON に `$schema` フィールドを書くだけで、VSCode の組み込み JSON 言語サポートが自動的に読み込む:
+
+```json
+{
+  "$schema": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+  "schemaVersion": "responsible.v1",
+  "activities": { ... }
+}
+```
+
+あるいは VSCode の `settings.json` でファイルパターンにスキーマを紐付ければ、各ファイルを編集せずに済む:
+
+```jsonc
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["*.responsible.json"],
+      "url": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+    },
+  ],
+}
+```
+
+この Schema はエディタ支援のための補助であり、正ではない: [`src/model.ts`](src/model.ts) から手書きで作成しており、未知キーについてはランタイムのバリデータより厳格だが、`ActivityDef.id` がキーと一致すること・`flows` の参照先が解決すること・分解階層の循環がないことといった参照整合性チェックは表現していない — 引き続き `validateProcessModel`(後述)が正である。`$schema` プロパティは常に許容され、`validateProcessModel` はこれを無視する。
+
 ## モデルスキーマ(`responsible.v0`)
 
 ```ts
