@@ -247,6 +247,7 @@ export function ProcessViewer() {
   const [importErrors, setImportErrors] =
     useState<readonly ProcessSelectErrorEntry[]>(initialImportErrors);
   const [sharedModelError, setSharedModelError] = useState<string | undefined>();
+  const [sharedModelPending, setSharedModelPending] = useState(Boolean(initialUrlState.modelParam));
   const [shareStatus, setShareStatus] = useState<ShareStatus>();
   // Lane frames always follow measured card sizes (ResizeObserver): an expanded
   // composite grows its lane's height, and the canvas widens when a fold needs
@@ -333,10 +334,7 @@ export function ProcessViewer() {
     pendingSizes.current = new Map();
   }, []);
 
-  // `#m=` links carry the model itself; decode it once after mount and swap
-  // it in, overriding the placeholder process the synchronous initial render
-  // picked. A broken value surfaces as an in-place error rather than a blank
-  // canvas.
+  // A broken `#m=` value surfaces as an in-place error rather than a blank canvas.
   useEffect(() => {
     const modelParam = initialUrlState.modelParam;
     if (!modelParam) return;
@@ -344,22 +342,32 @@ export function ProcessViewer() {
     decodeModelParam(modelParam)
       .then((json) => {
         if (cancelled) return;
+        // Reuse an already-persisted entry with identical content so revisiting
+        // the same share link repeatedly doesn't grow localStorage without bound.
+        const reused = loadStoredImportedModels().find((item) => item.json === json);
         const outcome = buildImportedProcess(json, "共有モデル");
         if (!outcome.ok) {
           setSharedModelError(outcome.error);
           return;
         }
-        addStoredImportedModel({
-          id: outcome.process.id,
-          title: outcome.process.title,
-          json: outcome.json,
-          importedAt: Date.now(),
-        });
-        setProcesses((prev) => [...prev, outcome.process]);
-        setProcessId(outcome.process.id);
+        const process: SampleProcess = reused
+          ? { ...outcome.process, id: reused.id, title: reused.title }
+          : outcome.process;
+        if (!reused) {
+          addStoredImportedModel({
+            id: process.id,
+            title: process.title,
+            json: outcome.json,
+            importedAt: Date.now(),
+          });
+        }
+        setProcesses((prev) =>
+          prev.some((existing) => existing.id === process.id) ? prev : [...prev, process],
+        );
+        setProcessId(process.id);
         const scope = initialUrlState.scopePath;
-        setScopePath(scope && scope.length > 0 ? scope : [outcome.process.rootActivityId]);
-        setSelectedLeafId(firstLeafId(outcome.process.model, outcome.process.rootActivityId));
+        setScopePath(scope && scope.length > 0 ? scope : [process.rootActivityId]);
+        setSelectedLeafId(firstLeafId(process.model, process.rootActivityId));
         resetSizes();
       })
       .catch((error: unknown) => {
@@ -367,6 +375,9 @@ export function ProcessViewer() {
         setSharedModelError(
           `共有リンクのモデルを読み込めませんでした — ${error instanceof Error ? error.message : String(error)}`,
         );
+      })
+      .finally(() => {
+        if (!cancelled) setSharedModelPending(false);
       });
     return () => {
       cancelled = true;
@@ -447,7 +458,6 @@ export function ProcessViewer() {
 
   const handleDeleteImported = useCallback(() => {
     removeStoredImportedModel(sample.id);
-    setImportErrors((prev) => prev.filter((entry) => entry.id !== sample.id));
     setProcesses((prev) => prev.filter((process) => process.id !== sample.id));
     selectProcess(sampleProcesses[0]!);
   }, [sample.id, selectProcess]);
@@ -458,6 +468,14 @@ export function ProcessViewer() {
   }, []);
 
   const handleCopyShareLink = useCallback(async () => {
+    if (sharedModelPending) {
+      setShareStatus({
+        kind: "error",
+        message: "共有リンクのモデルを読み込み中です。少し待ってからもう一度お試しください。",
+      });
+      return;
+    }
+
     let modelParam: string | undefined;
     if (sample.id.startsWith(IMPORTED_ID_PREFIX)) {
       const stored = loadStoredImportedModels().find((item) => item.id === sample.id);
@@ -498,7 +516,7 @@ export function ProcessViewer() {
         message: `クリップボードにコピーできませんでした — ${error instanceof Error ? error.message : String(error)}`,
       });
     }
-  }, [sample, zoomLevel, validScopePath]);
+  }, [sample, zoomLevel, validScopePath, sharedModelPending]);
 
   const handleSelectAncestor = useCallback(
     (index: number) => {
@@ -613,7 +631,12 @@ export function ProcessViewer() {
                 error={scopeError}
               />
               <ModelLoader onLoadFile={handleLoadFile} error={importError} />
-              <button type="button" className="secondary-action" onClick={handleCopyShareLink}>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={handleCopyShareLink}
+                disabled={sharedModelPending}
+              >
                 共有リンクをコピー
               </button>
               {shareStatus?.kind === "copied" && (
