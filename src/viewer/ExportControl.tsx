@@ -8,6 +8,7 @@ import {
   waitForFrames,
   type ExportFormat,
 } from "./exportImage";
+import { useI18n } from "./i18n";
 
 export type ExportControlProps = {
   containerRef: React.RefObject<HTMLElement | null>;
@@ -24,6 +25,7 @@ export function ExportControl({
   boundaryLabel,
   disabled,
 }: ExportControlProps) {
+  const { t } = useI18n();
   const { getNodes } = useReactFlow();
   const [exporting, setExporting] = useState<ExportFormat | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -50,7 +52,7 @@ export function ExportControl({
   );
 
   return (
-    <section className="export-control" aria-label="図のエクスポート">
+    <section className="export-control" aria-label={t("exportAriaLabel")}>
       {(Object.keys(FORMAT_LABELS) as ExportFormat[]).map((format) => (
         <button
           key={format}
@@ -59,7 +61,7 @@ export function ExportControl({
           disabled={disabled || exporting !== undefined}
           onClick={() => void handleExport(format)}
         >
-          {exporting === format ? "出力中…" : FORMAT_LABELS[format]}
+          {exporting === format ? t("exporting") : FORMAT_LABELS[format]}
         </button>
       ))}
       {error && (

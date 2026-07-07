@@ -40,6 +40,7 @@ import {
   loadStoredImportedModels,
   removeStoredImportedModel,
 } from "./storage";
+import { useI18n, type I18n, type Locale } from "./i18n";
 
 const DEFAULT_ZOOM_LEVEL = 1;
 const IMPORTED_ID_PREFIX = "imported:";
@@ -54,7 +55,7 @@ type ImportOutcome =
   | Readonly<{ ok: true; process: SampleProcess; json: string }>
   | Readonly<{ ok: false; error: string }>;
 
-function buildImportedProcess(json: string, titleHint: string): ImportOutcome {
+function buildImportedProcess(json: string, titleHint: string, t: I18n["t"]): ImportOutcome {
   const result = parseProcessModelJson(json);
   if (!result.ok) {
     const shown = result.issues
@@ -64,14 +65,17 @@ function buildImportedProcess(json: string, titleHint: string): ImportOutcome {
     const rest = result.issues.length - 3;
     return {
       ok: false,
-      error: `${titleHint} を読み込めませんでした — ${shown}${rest > 0 ? ` ほか${rest}件` : ""}`,
+      error: t("importError", {
+        fileName: titleHint,
+        issues: `${shown}${rest > 0 ? t("importErrorMore", { count: rest }) : ""}`,
+      }),
     };
   }
 
   const rooted = ensureRootActivity(result.model);
   const process: SampleProcess = {
     id: `${IMPORTED_ID_PREFIX}${titleHint}:${Date.now()}`,
-    title: `${titleHint}（読み込み）`,
+    title: t("importedTitleSuffix", { title: titleHint }),
     rootActivityId: rooted.rootActivityId,
     model: rooted.model,
   };
@@ -168,12 +172,13 @@ function ScopeControl({
   onDrillDown,
   error,
 }: ScopeControlProps) {
+  const { t } = useI18n();
   const currentScopeId = scopePath[scopePath.length - 1]!;
   const options = scopeOptions(model, currentScopeId);
 
   return (
     <section className="scope-control" aria-label="Activity decomposition scope">
-      <div className="scope-breadcrumb" aria-label="現在の表示スコープ">
+      <div className="scope-breadcrumb" aria-label={t("scopeBreadcrumbAriaLabel")}>
         {scopePath.map((id, index) => {
           const activity = model.activities[id];
           const label = activity?.name ?? id;
@@ -196,9 +201,9 @@ function ScopeControl({
           if (event.target.value) onDrillDown(event.target.value);
         }}
         disabled={options.length === 0}
-        aria-label="下位スコープへ移動"
+        aria-label={t("scopeDrillDownAriaLabel")}
       >
-        <option value="">分解先</option>
+        <option value="">{t("scopeSelectPlaceholder")}</option>
         {options.map((activity) => (
           <option key={activity.id} value={activity.id}>
             {activity.name ?? activity.id}
@@ -207,6 +212,35 @@ function ScopeControl({
       </select>
       {error && <span className="scope-error">{error}</span>}
     </section>
+  );
+}
+
+type LocaleToggleProps = {
+  locale: Locale;
+  onChange: (locale: Locale) => void;
+};
+
+function LocaleToggle({ locale, onChange }: LocaleToggleProps) {
+  const { t } = useI18n();
+  return (
+    <div className="locale-toggle" role="group" aria-label={t("localeToggleAriaLabel")}>
+      <button
+        type="button"
+        className={locale === "ja" ? "locale-current" : "locale-option"}
+        onClick={() => onChange("ja")}
+        disabled={locale === "ja"}
+      >
+        JA
+      </button>
+      <button
+        type="button"
+        className={locale === "en" ? "locale-current" : "locale-option"}
+        onClick={() => onChange("en")}
+        disabled={locale === "en"}
+      >
+        EN
+      </button>
+    </div>
   );
 }
 
@@ -228,6 +262,7 @@ const initialProcess: SampleProcess =
   initialProcesses[0]!;
 
 export function ProcessViewer() {
+  const { t, locale, setLocale } = useI18n();
   const [processes, setProcesses] = useState<readonly SampleProcess[]>(initialProcesses);
   const [processId, setProcessId] = useState(initialProcess.id);
   const [zoomLevel, setZoomLevel] = useState(() =>
@@ -345,7 +380,7 @@ export function ProcessViewer() {
         // Reuse an already-persisted entry with identical content so revisiting
         // the same share link repeatedly doesn't grow localStorage without bound.
         const reused = loadStoredImportedModels().find((item) => item.json === json);
-        const outcome = buildImportedProcess(json, "共有モデル");
+        const outcome = buildImportedProcess(json, t("sharedModelTitle"), t);
         if (!outcome.ok) {
           setSharedModelError(outcome.error);
           return;
@@ -373,7 +408,9 @@ export function ProcessViewer() {
       .catch((error: unknown) => {
         if (cancelled) return;
         setSharedModelError(
-          `共有リンクのモデルを読み込めませんでした — ${error instanceof Error ? error.message : String(error)}`,
+          t("sharedModelLoadError", {
+            message: error instanceof Error ? error.message : String(error),
+          }),
         );
       })
       .finally(() => {
@@ -382,7 +419,7 @@ export function ProcessViewer() {
     return () => {
       cancelled = true;
     };
-  }, [resetSizes]);
+  }, [resetSizes, t]);
 
   const handleSizeMeasured = useCallback((id: string, size: MeasuredSize) => {
     pendingSizes.current.set(id, size);
@@ -432,7 +469,7 @@ export function ProcessViewer() {
         .text()
         .then((text) => {
           const title = file.name.replace(/\.json$/i, "") || file.name;
-          const outcome = buildImportedProcess(text, title);
+          const outcome = buildImportedProcess(text, title, t);
           if (!outcome.ok) {
             setImportError(outcome.error);
             return;
@@ -449,11 +486,14 @@ export function ProcessViewer() {
         })
         .catch((error: unknown) => {
           setImportError(
-            `${file.name} を読み込めませんでした — ${error instanceof Error ? error.message : String(error)}`,
+            t("importError", {
+              fileName: file.name,
+              issues: error instanceof Error ? error.message : String(error),
+            }),
           );
         });
     },
-    [selectProcess],
+    [selectProcess, t],
   );
 
   const handleDeleteImported = useCallback(() => {
@@ -469,10 +509,7 @@ export function ProcessViewer() {
 
   const handleCopyShareLink = useCallback(async () => {
     if (sharedModelPending) {
-      setShareStatus({
-        kind: "error",
-        message: "共有リンクのモデルを読み込み中です。少し待ってからもう一度お試しください。",
-      });
+      setShareStatus({ kind: "error", message: t("shareLoadingError") });
       return;
     }
 
@@ -485,7 +522,9 @@ export function ProcessViewer() {
       } catch (error) {
         setShareStatus({
           kind: "error",
-          message: `共有リンクを生成できませんでした — ${error instanceof Error ? error.message : String(error)}`,
+          message: t("shareGenerateError", {
+            message: error instanceof Error ? error.message : String(error),
+          }),
         });
         return;
       }
@@ -500,10 +539,7 @@ export function ProcessViewer() {
     const url = `${location.origin}${location.pathname}${location.search}${hash}`;
 
     if (url.length > SHARE_URL_LENGTH_LIMIT) {
-      setShareStatus({
-        kind: "error",
-        message: "モデルが大きすぎて URL 共有できません。JSON ファイルを直接共有してください。",
-      });
+      setShareStatus({ kind: "error", message: t("shareTooLargeError") });
       return;
     }
 
@@ -513,10 +549,12 @@ export function ProcessViewer() {
     } catch (error) {
       setShareStatus({
         kind: "error",
-        message: `クリップボードにコピーできませんでした — ${error instanceof Error ? error.message : String(error)}`,
+        message: t("shareClipboardError", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
       });
     }
-  }, [sample, zoomLevel, validScopePath, sharedModelPending]);
+  }, [sample, zoomLevel, validScopePath, sharedModelPending, t]);
 
   const handleSelectAncestor = useCallback(
     (index: number) => {
@@ -573,7 +611,7 @@ export function ProcessViewer() {
             (sharedModelError || projection.error) && (
               <div className="projection-error" role="alert">
                 <strong>
-                  {sharedModelError ? "共有リンクを読み込めません" : "このスコープは表示できません"}
+                  {sharedModelError ? t("sharedModelUnavailable") : t("scopeUnavailable")}
                 </strong>
                 <p>{sharedModelError ?? projection.error}</p>
               </div>
@@ -582,13 +620,15 @@ export function ProcessViewer() {
           notice={
             effectIssues && (
               <div className="effect-issues" role="alert">
-                <strong>Effect を表示できません（INV-3 違反）</strong>
+                <strong>{t("effectUnavailable")}</strong>
                 <p>
                   {effectIssues
                     .slice(0, 3)
                     .map((issue) => `${issue.path}: ${issue.message}`)
                     .join(" / ")}
-                  {effectIssues.length > 3 ? ` ほか${effectIssues.length - 3}件` : ""}
+                  {effectIssues.length > 3
+                    ? t("effectIssuesMore", { count: effectIssues.length - 3 })
+                    : ""}
                 </p>
               </div>
             )
@@ -603,16 +643,16 @@ export function ProcessViewer() {
               />
               {sample.id.startsWith(IMPORTED_ID_PREFIX) && (
                 <button type="button" className="secondary-action" onClick={handleDeleteImported}>
-                  このモデルを削除
+                  {t("deleteImportedModel")}
                 </button>
               )}
               {importErrors.map((entry) => (
                 <span key={entry.id} className="import-error-item" role="alert">
-                  {entry.title}（読み込みエラー）
+                  {t("loadErrorOption", { title: entry.title })}
                   <button
                     type="button"
                     onClick={() => handleDeleteImportError(entry.id)}
-                    aria-label={`${entry.title} を削除`}
+                    aria-label={t("deleteImportErrorAriaLabel", { title: entry.title })}
                   >
                     ×
                   </button>
@@ -637,10 +677,10 @@ export function ProcessViewer() {
                 onClick={handleCopyShareLink}
                 disabled={sharedModelPending}
               >
-                共有リンクをコピー
+                {t("copyShareLink")}
               </button>
               {shareStatus?.kind === "copied" && (
-                <span className="share-status share-status-ok">コピーしました</span>
+                <span className="share-status share-status-ok">{t("shareCopied")}</span>
               )}
               {shareStatus?.kind === "error" && (
                 <span className="share-status share-status-error" role="alert">
@@ -650,15 +690,16 @@ export function ProcessViewer() {
               <ExportControl
                 containerRef={canvasRef}
                 processName={sample.title}
-                boundaryLabel={boundaryLabelFor(zoomLevel)}
+                boundaryLabel={boundaryLabelFor(zoomLevel, t)}
                 disabled={Boolean(projection.error)}
               />
               {effects && effects.length > 0 && (
                 <span className="effect-legend">
                   <span className="legend-dash" aria-hidden="true" />
-                  Effect（境界を越えて観測可能な作用。破線は directed の配送先）
+                  {t("effectLegend")}
                 </span>
               )}
+              <LocaleToggle locale={locale} onChange={setLocale} />
             </>
           }
         />

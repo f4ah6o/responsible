@@ -1,4 +1,5 @@
 import type { SampleProcess } from "../sample.js";
+import { useI18n } from "./i18n";
 
 export type ProcessSelectErrorEntry = Readonly<{ id: string; title: string }>;
 
@@ -10,9 +11,10 @@ export type ProcessSelectProps = {
 };
 
 export function ProcessSelect({ processes, value, onChange, errors }: ProcessSelectProps) {
+  const { t } = useI18n();
   return (
     <label className="process-picker">
-      <span>プロセス</span>
+      <span>{t("processLabel")}</span>
       <select value={value} onChange={(event) => onChange(event.currentTarget.value)}>
         {processes.map((process) => (
           <option key={process.id} value={process.id}>
@@ -21,7 +23,7 @@ export function ProcessSelect({ processes, value, onChange, errors }: ProcessSel
         ))}
         {errors?.map((entry) => (
           <option key={entry.id} value={entry.id} disabled>
-            {entry.title}（読み込みエラー）
+            {t("loadErrorOption", { title: entry.title })}
           </option>
         ))}
       </select>
