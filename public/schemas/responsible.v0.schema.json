@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json",
+  "title": "responsible.v0 ProcessModel",
+  "description": "Editor-support schema for the responsible.v0 ProcessModel document. The authoritative definitions are src/model.ts (types) and src/validate.ts (structural validation, incl. referential integrity like Activity id === key, flow endpoints, and decomposition-cycle checks), which this schema does not fully express.",
+  "type": "object",
+  "required": ["schemaVersion", "activities", "flows"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": "responsible.v0"
+    },
+    "activities": {
+      "type": "object",
+      "description": "Activity ID を キーとする Activity 定義の辞書。少なくとも 1 件必要。",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/ActivityDef" }
+    },
+    "types": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/TypeDef" }
+    },
+    "flows": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FlowDef" }
+    },
+    "views": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ViewDef" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "TypeRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "BoundaryKey": {
+      "type": "string",
+      "minLength": 1
+    },
+    "BoundaryValue": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BoundaryValue" }
+        },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/BoundaryValue" }
+        }
+      ]
+    },
+    "Responsibility": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/BoundaryValue" }
+    },
+    "ActivityStatus": {
+      "enum": ["discovered", "defined", "validated", "automatable"]
+    },
+    "ActivityDef": {
+      "type": "object",
+      "description": "id は所属する activities オブジェクトのキーと一致する必要がある（この整合性は validateProcessModel が担い、Schema では表現しない）。",
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": { "type": "string" },
+        "input": { "$ref": "#/$defs/TypeRef" },
+        "output": { "$ref": "#/$defs/TypeRef" },
+        "responsibility": { "$ref": "#/$defs/Responsibility" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "status": { "$ref": "#/$defs/ActivityStatus" }
+      },
+      "additionalProperties": false
+    },
+    "FlowDef": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "from": { "$ref": "#/$defs/Id" },
+        "to": { "$ref": "#/$defs/Id" },
+        "mapping": { "type": "string" },
+        "contract": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "FieldDef": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "$ref": "#/$defs/TypeRef" },
+        "required": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "PrimitiveTypeDef": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "const": "primitive" },
+        "name": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "RecordTypeDef": {
+      "type": "object",
+      "required": ["kind", "fields"],
+      "properties": {
+        "kind": { "const": "record" },
+        "fields": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/FieldDef" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "UnionTypeDef": {
+      "type": "object",
+      "required": ["kind", "variants"],
+      "properties": {
+        "kind": { "const": "union" },
+        "variants": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/TypeRef" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ResultTypeDef": {
+      "type": "object",
+      "required": ["kind", "ok", "error"],
+      "properties": {
+        "kind": { "const": "result" },
+        "ok": { "$ref": "#/$defs/TypeRef" },
+        "error": { "$ref": "#/$defs/TypeRef" }
+      },
+      "additionalProperties": false
+    },
+    "TypeDef": {
+      "oneOf": [
+        { "$ref": "#/$defs/PrimitiveTypeDef" },
+        { "$ref": "#/$defs/RecordTypeDef" },
+        { "$ref": "#/$defs/UnionTypeDef" },
+        { "$ref": "#/$defs/ResultTypeDef" }
+      ]
+    },
+    "BoundaryExpr": {
+      "anyOf": [
+        { "$ref": "#/$defs/BoundaryKey" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/BoundaryKey" },
+          "minItems": 1
+        }
+      ]
+    },
+    "ViewDef": {
+      "type": "object",
+      "required": ["id", "layout", "boundary", "normalForm"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "layout": { "const": "lane" },
+        "boundary": { "$ref": "#/$defs/BoundaryExpr" },
+        "normalForm": { "const": "responsibilityBoundary" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

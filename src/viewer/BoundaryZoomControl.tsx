@@ -14,9 +14,13 @@ const BOUNDARY_LABELS: Record<string, string> = {
   person: "担当者",
 };
 
-export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoomControlProps) {
+export function boundaryLabelFor(level: number): string {
   const key = HIERARCHICAL_BOUNDARY_ORDER[level] ?? "—";
-  const label = BOUNDARY_LABELS[key] ?? key;
+  return BOUNDARY_LABELS[key] ?? key;
+}
+
+export function BoundaryZoomControl({ level, onZoomIn, onZoomOut }: BoundaryZoomControlProps) {
+  const label = boundaryLabelFor(level);
   const ordinal = level + 1;
   const total = HIERARCHICAL_BOUNDARY_ORDER.length;
   const canIn = canZoomIn(level);

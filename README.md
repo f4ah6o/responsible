@@ -69,6 +69,7 @@ The viewer ships with bundled sample processes (software development, document p
 2. Click **“JSON を読み込む”** (Load JSON) in the toolbar. The imported model is saved to `localStorage` and stays in the process list — including after a reload — until you remove it with **“このモデルを削除”** (Delete this model).
 3. Use **boundary zoom** to move between organizational levels, **drill-down** to open an Activity's decomposition, and viewport pan/zoom to navigate the canvas.
 4. Share the URL with **“共有リンクをコピー”** (Copy share link). For a bundled sample, `#p=…&z=…&s=…` encodes the process, zoom level, and scope. For an imported model, the model itself is deflate-compressed and embedded as `#m=…&z=…&s=…`, so opening the link in another browser reproduces the exact diagram without needing the original JSON file. Very large models are rejected with an in-toolbar warning instead of producing an unusable URL.
+5. Click **SVG** or **PNG** in the toolbar to export the current view (current boundary zoom, drill-down scope, and composite expansion) as a file named `{process name}-{boundary level}.{svg|png}`. PNG exports at `pixelRatio: 2` for crisp text. Export is disabled while the scope's error panel is showing.
 
 Invalid models are reported with JSON-path error messages. Models containing cycles load, but affected scopes display an error panel instead of a diagram. A corrupted `#m=` value (e.g. a hand-edited link) shows the same kind of error panel rather than a blank screen; a persisted model that fails to re-validate (e.g. after a future schema change) is listed as unselectable with a "読み込みエラー" (load error) marker and can be removed from the toolbar.
 
@@ -89,6 +90,35 @@ if (!result.ok) {
 ```
 
 The core is not yet published to npm; use it in-repo or vendor `src/` (everything is re-exported from [`src/index.ts`](src/index.ts)).
+
+## Authoring models
+
+JSON Schema (draft 2020-12) files for `responsible.v0` / `responsible.v1` are published from [`schemas/`](schemas/) at `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` and `…/responsible.v1.schema.json`, so editors can offer key completion and inline validation while you hand-write a model.
+
+Add a `$schema` field to your model JSON and VSCode's built-in JSON language support picks it up automatically:
+
+```json
+{
+  "$schema": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+  "schemaVersion": "responsible.v1",
+  "activities": { ... }
+}
+```
+
+Alternatively, map file patterns to a schema in VSCode's `settings.json` without editing every file:
+
+```jsonc
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["*.responsible.json"],
+      "url": "https://f4ah6o.github.io/responsible/schemas/responsible.v1.schema.json",
+    },
+  ],
+}
+```
+
+The schemas are an editor-support aid, not the source of truth: they are hand-written (not generated) from [`src/model.ts`](src/model.ts) and are stricter than the runtime validator on unknown keys, but they don't express referential checks like `ActivityDef.id` matching its key, `flows` endpoints resolving, or decomposition-cycle detection — `validateProcessModel` (see below) remains authoritative. A `$schema` property is always accepted and ignored by `validateProcessModel`.
 
 ## Model schema (`responsible.v0`)
 
@@ -151,7 +181,7 @@ src/
   __tests__/     node:test suites (invariants, projection, zoom, validation)
 ```
 
-The **projection core** (everything outside `src/viewer/`) is dependency-free. Only the viewer depends on React and `@xyflow/react`. DSL parsing, persistence, and execution runtimes are intentionally downstream layers, out of scope for this repository.
+The **projection core** (everything outside `src/viewer/`) is dependency-free. Only the viewer depends on React, `@xyflow/react`, and `html-to-image` (SVG/PNG export). DSL parsing, persistence, and execution runtimes are intentionally downstream layers, out of scope for this repository.
 
 ### Non-goals
 
