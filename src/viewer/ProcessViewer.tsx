@@ -29,6 +29,7 @@ import { ModelLoader } from "./ModelLoader";
 import { ProcessSelect } from "./ProcessSelect";
 import { projectionToFlow } from "./projectionToFlow";
 import { readViewerUrlState, writeViewerUrlState } from "./urlState";
+import { useI18n, type Locale } from "./i18n";
 
 const DEFAULT_ZOOM_LEVEL = 1;
 
@@ -99,12 +100,13 @@ function ScopeControl({
   onDrillDown,
   error,
 }: ScopeControlProps) {
+  const { t } = useI18n();
   const currentScopeId = scopePath[scopePath.length - 1]!;
   const options = scopeOptions(model, currentScopeId);
 
   return (
     <section className="scope-control" aria-label="Activity decomposition scope">
-      <div className="scope-breadcrumb" aria-label="現在の表示スコープ">
+      <div className="scope-breadcrumb" aria-label={t("scopeBreadcrumbAriaLabel")}>
         {scopePath.map((id, index) => {
           const activity = model.activities[id];
           const label = activity?.name ?? id;
@@ -127,9 +129,9 @@ function ScopeControl({
           if (event.target.value) onDrillDown(event.target.value);
         }}
         disabled={options.length === 0}
-        aria-label="下位スコープへ移動"
+        aria-label={t("scopeDrillDownAriaLabel")}
       >
-        <option value="">分解先</option>
+        <option value="">{t("scopeSelectPlaceholder")}</option>
         {options.map((activity) => (
           <option key={activity.id} value={activity.id}>
             {activity.name ?? activity.id}
@@ -141,6 +143,35 @@ function ScopeControl({
   );
 }
 
+type LocaleToggleProps = {
+  locale: Locale;
+  onChange: (locale: Locale) => void;
+};
+
+function LocaleToggle({ locale, onChange }: LocaleToggleProps) {
+  const { t } = useI18n();
+  return (
+    <div className="locale-toggle" role="group" aria-label={t("localeToggleAriaLabel")}>
+      <button
+        type="button"
+        className={locale === "ja" ? "locale-current" : "locale-option"}
+        onClick={() => onChange("ja")}
+        disabled={locale === "ja"}
+      >
+        JA
+      </button>
+      <button
+        type="button"
+        className={locale === "en" ? "locale-current" : "locale-option"}
+        onClick={() => onChange("en")}
+        disabled={locale === "en"}
+      >
+        EN
+      </button>
+    </div>
+  );
+}
+
 const initialUrlState = readViewerUrlState(typeof window === "undefined" ? "" : location.hash);
 
 const initialProcess: SampleProcess =
@@ -148,6 +179,7 @@ const initialProcess: SampleProcess =
   sampleProcesses[0]!;
 
 export function ProcessViewer() {
+  const { t, locale, setLocale } = useI18n();
   const [processes, setProcesses] = useState<readonly SampleProcess[]>(sampleProcesses);
   const [processId, setProcessId] = useState(initialProcess.id);
   const [zoomLevel, setZoomLevel] = useState(() =>
@@ -292,7 +324,10 @@ export function ProcessViewer() {
               .join(" / ");
             const rest = result.issues.length - 3;
             setImportError(
-              `${file.name} を読み込めませんでした — ${shown}${rest > 0 ? ` ほか${rest}件` : ""}`,
+              t("importError", {
+                fileName: file.name,
+                issues: `${shown}${rest > 0 ? t("importErrorMore", { count: rest }) : ""}`,
+              }),
             );
             return;
           }
@@ -301,7 +336,7 @@ export function ProcessViewer() {
           const title = file.name.replace(/\.json$/i, "") || file.name;
           const imported: SampleProcess = {
             id: `imported:${title}:${Date.now()}`,
-            title: `${title}（読み込み）`,
+            title: t("importedTitleSuffix", { title }),
             rootActivityId: rooted.rootActivityId,
             model: rooted.model,
           };
@@ -311,11 +346,14 @@ export function ProcessViewer() {
         })
         .catch((error: unknown) => {
           setImportError(
-            `${file.name} を読み込めませんでした — ${error instanceof Error ? error.message : String(error)}`,
+            t("importError", {
+              fileName: file.name,
+              issues: error instanceof Error ? error.message : String(error),
+            }),
           );
         });
     },
-    [selectProcess],
+    [selectProcess, t],
   );
 
   const handleSelectAncestor = useCallback(
@@ -371,7 +409,7 @@ export function ProcessViewer() {
           overlay={
             projection.error && (
               <div className="projection-error" role="alert">
-                <strong>このスコープは表示できません</strong>
+                <strong>{t("scopeUnavailable")}</strong>
                 <p>{projection.error}</p>
               </div>
             )
@@ -379,13 +417,15 @@ export function ProcessViewer() {
           notice={
             effectIssues && (
               <div className="effect-issues" role="alert">
-                <strong>Effect を表示できません（INV-3 違反）</strong>
+                <strong>{t("effectUnavailable")}</strong>
                 <p>
                   {effectIssues
                     .slice(0, 3)
                     .map((issue) => `${issue.path}: ${issue.message}`)
                     .join(" / ")}
-                  {effectIssues.length > 3 ? ` ほか${effectIssues.length - 3}件` : ""}
+                  {effectIssues.length > 3
+                    ? t("effectIssuesMore", { count: effectIssues.length - 3 })
+                    : ""}
                 </p>
               </div>
             )
@@ -413,9 +453,10 @@ export function ProcessViewer() {
               {effects && effects.length > 0 && (
                 <span className="effect-legend">
                   <span className="legend-dash" aria-hidden="true" />
-                  Effect（境界を越えて観測可能な作用。破線は directed の配送先）
+                  {t("effectLegend")}
                 </span>
               )}
+              <LocaleToggle locale={locale} onChange={setLocale} />
             </>
           }
         />

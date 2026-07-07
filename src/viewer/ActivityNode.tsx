@@ -3,12 +3,13 @@ import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
 import type { ActivityNodeData, MemberInfo } from "./projectionToFlow";
 import { useSizeReporter } from "./SizeReportContext";
+import { useI18n, type MessageKey } from "./i18n";
 
 type ActivityNodeType = Node<ActivityNodeData, "activity">;
 
-const KIND_LABELS: Record<string, string> = {
-  atomic: "単体",
-  composite: "合成",
+const KIND_LABEL_KEYS: Record<string, MessageKey> = {
+  atomic: "kindAtomic",
+  composite: "kindComposite",
 };
 
 const BASE_CARD_WIDTH = 180;
@@ -31,9 +32,10 @@ function cardWidthFor(columns: number): number {
 }
 
 function EffectBadges({ effects }: { effects: ActivityNodeData["effects"] }) {
+  const { t } = useI18n();
   if (effects.length === 0) return null;
   return (
-    <ul className="activity-effects" aria-label="観測可能な Effect">
+    <ul className="activity-effects" aria-label={t("effectsAriaLabel")}>
       {effects.map((effect, index) => (
         <li
           key={`${effect.source.activityId}:${index}`}
@@ -66,13 +68,15 @@ function MemberRow({ member }: { member: MemberInfo }) {
 }
 
 export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
+  const { t } = useI18n();
   const { activity, names, members } = data;
   const isComposite = activity.kind === "composite";
   const [expanded, setExpanded] = useState(false);
 
   const title = activity.kind === "atomic" ? (names[0] ?? activity.id) : names.join(" + ");
-  const subtitle = isComposite ? `${names.length} 件の Activity を合成` : activity.id;
-  const kindLabel = KIND_LABELS[activity.kind] ?? activity.kind;
+  const subtitle = isComposite ? t("compositeSubtitle", { count: names.length }) : activity.id;
+  const kindLabelKey = KIND_LABEL_KEYS[activity.kind];
+  const kindLabel = kindLabelKey ? t(kindLabelKey) : activity.kind;
 
   const ref = useRef<HTMLDivElement>(null);
   const report = useSizeReporter();
@@ -133,12 +137,12 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
               setExpanded((value) => !value);
             }}
           >
-            {expanded ? "▾ 内訳を隠す" : `▸ 内訳を表示（${members.length}）`}
+            {expanded ? t("hideMembers") : t("showMembers", { count: members.length })}
           </button>
           {expanded && (
             <ul
               className="activity-members"
-              aria-label="合成された Activity の内訳"
+              aria-label={t("membersAriaLabel")}
               style={
                 columns > 1
                   ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }

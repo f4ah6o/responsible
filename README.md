@@ -66,11 +66,13 @@ pnpm run preview    # preview the production build
 The viewer ships with bundled sample processes (software development, document publishing, AI agent execution, a branching/merging estimate approval flow, and a `responsible.v1` application approval flow with contracts and effects). To view your own process:
 
 1. Write a `responsible.v0` or `responsible.v1` JSON model — start from [`examples/order-fulfillment.json`](examples/order-fulfillment.json) (v0, a six-Activity order-to-invoice process) or [`examples/application-approval.v1.json`](examples/application-approval.v1.json) (v1, with `requires` / `ensures` / `effects`).
-2. Click **“JSON を読み込む”** (Load JSON) in the toolbar.
+2. Click **“Load JSON”** in the toolbar.
 3. Use **boundary zoom** to move between organizational levels, **drill-down** to open an Activity's decomposition, and viewport pan/zoom to navigate the canvas.
 4. Share the URL — `#p=…&z=…&s=…` encodes the process, zoom level, and scope (the imported JSON itself is not embedded in the URL).
 
 Invalid models are reported with JSON-path error messages. Models containing cycles load, but affected scopes display an error panel instead of a diagram.
+
+The UI is available in Japanese and English via the **JA / EN** toggle in the toolbar (`src/viewer/i18n.ts`); the initial language follows the browser and is then remembered in `localStorage`. Model data — Activity names, responsibility values, and sample process names — is never translated.
 
 ## Using the core
 

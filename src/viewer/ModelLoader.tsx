@@ -1,5 +1,7 @@
 import { useCallback, useRef } from "react";
 
+import { useI18n } from "./i18n";
+
 export type ModelLoaderProps = {
   onLoadFile: (file: File) => void;
   error?: string | undefined;
@@ -7,6 +9,7 @@ export type ModelLoaderProps = {
 
 export function ModelLoader({ onLoadFile, error }: ModelLoaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useI18n();
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,7 +22,7 @@ export function ModelLoader({ onLoadFile, error }: ModelLoaderProps) {
   );
 
   return (
-    <section className="model-loader" aria-label="プロセスモデルの読み込み">
+    <section className="model-loader" aria-label={t("modelLoaderAriaLabel")}>
       <input
         ref={inputRef}
         type="file"
@@ -28,7 +31,7 @@ export function ModelLoader({ onLoadFile, error }: ModelLoaderProps) {
         hidden
       />
       <button type="button" className="secondary-action" onClick={() => inputRef.current?.click()}>
-        JSON を読み込む
+        {t("loadJson")}
       </button>
       {error && (
         <span className="model-loader-error" role="alert">
