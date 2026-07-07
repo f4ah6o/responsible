@@ -15,7 +15,7 @@ The core quotient projection described here is implemented in `src/quotient.ts` 
 - Schema/version decision: nonlinear projection is a projection capability over `responsible.v0` data; no `responsible.v1` model metadata is required.
 - The reference viewer uses the DAG projector; the `見積承認（分岐・合流）` sample process exercises branch and merge at every boundary level.
 
-Remaining future work: loop semantics, parallel semantics, exception-path presentation, and richer viewer edge routing.
+Remaining future work: parallel semantics, exception-path presentation, and richer viewer edge routing. Loop semantics is defined in [`docs/loops.md`](loops.md); cycles stay rejected until its staged implementation lands.
 
 ## Graph class
 
@@ -23,7 +23,7 @@ The first nonlinear implementation target is a finite directed acyclic Activity 
 
 - Branching and merging are in scope.
 - Parallel-looking regions are represented as DAG branches that later merge.
-- Cycles remain out of scope and continue to be rejected until a separate loop semantics exists.
+- Cycles are out of scope for this document; their semantics is defined separately in [`docs/loops.md`](loops.md).
 - Exception paths are modeled as typed branches, usually with `Result` / union outputs.
 
 The current linear case must remain a special case of the nonlinear design.

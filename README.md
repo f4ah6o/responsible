@@ -122,15 +122,16 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 
 ## Documentation
 
-| Document                                                                                                        | Contents                                                                                      |
-| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **Normative** semantic rules: Activity, Responsibility Boundary, Projection, RBNF, invariants |
-| [`docs/theory.md`](docs/theory.md)                                                                              | Theoretical background and how theory maps onto the implementation                            |
-| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | Scope and dependency policy of the reference implementation                                   |
-| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | Design of the DAG graph quotient projection                                                   |
-| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **Normative** `responsible.v1` schema design (contracts and effects) and staged plan          |
-| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                              |
-| [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                           |
+| Document                                                                                                        | Contents                                                                                        |
+| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **Normative** semantic rules: Activity, Responsibility Boundary, Projection, RBNF, invariants   |
+| [`docs/theory.md`](docs/theory.md)                                                                              | Theoretical background and how theory maps onto the implementation                              |
+| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | Scope and dependency policy of the reference implementation                                     |
+| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | Design of the DAG graph quotient projection                                                     |
+| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **Normative** `responsible.v1` schema design (contracts and effects) and staged plan            |
+| [`docs/loops.md`](docs/loops.md)                                                                                | **Normative** loop (cycle) projection semantics — return edges, tau-loop rule — and staged plan |
+| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                                |
+| [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                             |
 
 ## Architecture
 
@@ -158,7 +159,7 @@ The **projection core** (everything outside `src/viewer/`) is dependency-free. O
 
 ## Project status
 
-Version `0.x` — the API and JSON schemas (`responsible.v0` / `responsible.v1`) may change between minor versions. The core implements the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, `Effect` as plain data, DAG projection, and — with `responsible.v1` — declared contracts and boundary-projected effects per [`docs/responsible-v1.md`](docs/responsible-v1.md). There is no execution or inverse-projection API, and cycles are rejected until a loop semantics is defined.
+Version `0.x` — the API and JSON schemas (`responsible.v0` / `responsible.v1`) may change between minor versions. The core implements the assertable subset of the semantic core: invariants `INV-1`–`INV-6`, `Effect` as plain data, DAG projection, and — with `responsible.v1` — declared contracts and boundary-projected effects per [`docs/responsible-v1.md`](docs/responsible-v1.md). There is no execution or inverse-projection API. Loop (cycle) semantics is defined in [`docs/loops.md`](docs/loops.md); until its staged implementation lands, the projector still rejects cycles.
 
 Notable changes are tracked in [`CHANGES.md`](CHANGES.md).
 
