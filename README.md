@@ -122,15 +122,16 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 
 ## Documentation
 
-| Document                                                                                                        | Contents                                                                                      |
-| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **Normative** semantic rules: Activity, Responsibility Boundary, Projection, RBNF, invariants |
-| [`docs/theory.md`](docs/theory.md)                                                                              | Theoretical background and how theory maps onto the implementation                            |
-| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | Scope and dependency policy of the reference implementation                                   |
-| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | Design of the DAG graph quotient projection                                                   |
-| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **Normative** `responsible.v1` schema design (contracts and effects) and staged plan          |
-| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                              |
-| [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                           |
+| Document                                                                                                        | Contents                                                                                           |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [`docs/semantic-core.md`](docs/semantic-core.md)                                                                | **Normative** semantic rules: Activity, Responsibility Boundary, Projection, RBNF, invariants      |
+| [`docs/theory.md`](docs/theory.md)                                                                              | Theoretical background and how theory maps onto the implementation                                 |
+| [`docs/reference-implementation.md`](docs/reference-implementation.md)                                          | Scope and dependency policy of the reference implementation                                        |
+| [`docs/nonlinear-projection.md`](docs/nonlinear-projection.md)                                                  | Design of the DAG graph quotient projection                                                        |
+| [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **Normative** `responsible.v1` schema design (contracts and effects) and staged plan               |
+| [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                                   |
+| [`docs/workflow-discovery.md`](docs/workflow-discovery.md)                                                      | **Normative** operator-level discovery: `tool` boundary level, `responsible.oplog.v0`, staged plan |
+| [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                                |
 
 ## Architecture
 
