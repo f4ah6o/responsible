@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "型付き Activity と責任境界による業務プロセスモデルのリファレンス実装。",
   "license": "MIT",
+  "bin": {
+    "responsible": "./dist-lib/cli.js"
+  },
   "files": [
     "dist-lib",
     "README.md",
@@ -27,6 +30,7 @@
     "format:check": "vp check",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import ./tools/test-register.mjs --test \"src/__tests__/**/*.test.ts\"",
+    "cli": "node --import ./tools/test-register.mjs src/cli.ts",
     "preview": "vp preview",
     "lint:pkg": "publint && attw --pack . --profile esm-only",
     "prepack": "pnpm run build:lib"

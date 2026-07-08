@@ -97,6 +97,23 @@ if (!result.ok) {
 
 パッケージは ESM only で型定義も同梱している。すべて [`src/index.ts`](src/index.ts) から re-export されている。リポジトリ内で使う、あるいは `src/` を vendor することも引き続き可能。
 
+## CLI
+
+パッケージには依存ゼロの `responsible` CLI(`src/cli.ts`、ビルド後は `dist-lib/cli.js`)も同梱されており、ターミナルや CI パイプラインからモデル JSON の検証・v1 移行・境界射影を実行できる:
+
+```sh
+# 1件以上のモデルファイルを検証する。1件でも invalid なら exit 1。
+npx responsible validate models/*.json
+
+# responsible.v0 モデルを v1 へ移行して stdout に出力する。
+npx responsible migrate models/order-fulfillment.json > models/order-fulfillment.v1.json
+
+# モデルを指定した責任境界へ射影し、ProcessView を stdout に出力する。
+npx responsible project models/order-fulfillment.json --boundary department
+```
+
+正常出力(移行後・射影後の JSON)は stdout に、診断情報(検証エラー、`ok <file>`)は stderr に出るため、`validate` / `migrate` はパイプで連結できる。`--boundary` には `company / department / section / team / person` のいずれかを指定する。使い方は `responsible --help` または引数なしで実行すると表示される。
+
 ## モデルを書く(エディタ支援)
 
 `responsible.v0` / `responsible.v1` の JSON Schema(draft 2020-12)を [`schemas/`](schemas/) から `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` / `…/responsible.v1.schema.json` として配信している。モデル JSON を手書きする際、エディタでのキー補完とインライン検証に使える。
