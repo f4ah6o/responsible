@@ -185,6 +185,7 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 | [`docs/loops.md`](docs/loops.md)                                                                                | **Normative** loop (cycle) projection semantics — return edges, tau-loop rule — and staged plan |
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                                |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                             |
+| [`docs/release.md`](docs/release.md)                                                                            | Release process: `CHANGES.md`, version bump, release workflow                                   |
 
 ## Architecture
 
@@ -225,6 +226,8 @@ pnpm run check && pnpm run typecheck && pnpm test && pnpm run build
 ```
 
 For changes to the model semantics, [`docs/semantic-core.md`](docs/semantic-core.md) is normative; please keep code, tests, and that document consistent.
+
+Maintainers cutting a release should follow [`docs/release.md`](docs/release.md).
 
 ## Deployment
 
