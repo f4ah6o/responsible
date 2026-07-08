@@ -185,6 +185,7 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 | [`docs/loops.md`](docs/loops.ja.md)                                                                             | **規範的（normative）** なループ（サイクル）射影の意味論——戻りエッジ、tau ループ規則——と段階的計画 |
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                                   |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                                 |
+| [`docs/release.md`](docs/release.ja.md)                                                                         | リリース手順: `CHANGES.md`、バージョン更新、リリースワークフロー                                   |
 
 ## アーキテクチャ
 
@@ -225,6 +226,8 @@ pnpm run check && pnpm run typecheck && pnpm test && pnpm run build
 ```
 
 モデルの意味論に関わる変更については [`docs/semantic-core.md`](docs/semantic-core.md) が規範である。コード・テスト・当該ドキュメントの整合性を保つこと。
+
+リリースを切る maintainer は [`docs/release.ja.md`](docs/release.ja.md) の手順に従うこと。
 
 ## デプロイ
 
