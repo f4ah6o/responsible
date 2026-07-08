@@ -77,10 +77,14 @@ UI はツールバーの **JA / EN** トグル(`src/viewer/i18n.ts`)で日本語
 
 ## コアの使い方
 
-射影と検証のコアはランタイム依存を持たず、ビューアなしでも使える。
+射影と検証のコアはランタイム依存を持たず、ビューアなしでも使える。npm からインストールできる:
+
+```sh
+npm install @f4ah6o/responsible
+```
 
 ```ts
-import { parseProcessModelJson, ensureRootActivity } from "./src/index.js";
+import { parseProcessModelJson, ensureRootActivity } from "@f4ah6o/responsible";
 
 const result = parseProcessModelJson(jsonText);
 if (!result.ok) {
@@ -91,7 +95,7 @@ if (!result.ok) {
 }
 ```
 
-コアはまだ npm に公開していない。リポジトリ内で使うか、`src/` を vendor すること(すべて [`src/index.ts`](src/index.ts) から re-export されている)。
+パッケージは ESM only で型定義も同梱している。すべて [`src/index.ts`](src/index.ts) から re-export されている。リポジトリ内で使う、あるいは `src/` を vendor することも引き続き可能。
 
 ## モデルを書く(エディタ支援)
 

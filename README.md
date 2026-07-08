@@ -77,10 +77,14 @@ The UI is available in Japanese and English via the **JA / EN** toggle in the to
 
 ## Using the core
 
-The projection and validation core has no runtime dependencies and works without the viewer:
+The projection and validation core has zero runtime dependencies and works without the viewer. Install it from npm:
+
+```sh
+npm install @f4ah6o/responsible
+```
 
 ```ts
-import { parseProcessModelJson, ensureRootActivity } from "./src/index.js";
+import { parseProcessModelJson, ensureRootActivity } from "@f4ah6o/responsible";
 
 const result = parseProcessModelJson(jsonText);
 if (!result.ok) {
@@ -91,7 +95,7 @@ if (!result.ok) {
 }
 ```
 
-The core is not yet published to npm; use it in-repo or vendor `src/` (everything is re-exported from [`src/index.ts`](src/index.ts)).
+The package is ESM only and ships type declarations. Everything is re-exported from [`src/index.ts`](src/index.ts). Alternatively, use it in-repo or vendor `src/` directly.
 
 ## Authoring models
 

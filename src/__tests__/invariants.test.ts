@@ -167,17 +167,25 @@ test("pure projection core modules import only relative modules (dependency-free
   }
 });
 
-test("reference viewer declares react / react-dom / @xyflow/react runtime dependencies", () => {
+test("published package has zero runtime dependencies; viewer deps stay in devDependencies", () => {
   const pkgPath = fileURLToPath(new URL("../../package.json", import.meta.url));
   const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
 
-  assert.ok(pkg.dependencies, "package.json must declare runtime dependencies for the viewer");
-  for (const name of ["react", "react-dom", "@xyflow/react"]) {
-    assert.equal(typeof pkg.dependencies?.[name], "string", `missing runtime dependency: ${name}`);
-  }
+  assert.equal(
+    pkg.dependencies,
+    undefined,
+    "the published core package must have zero runtime dependencies",
+  );
   assert.equal(typeof pkg.devDependencies, "object");
   assert.ok(pkg.devDependencies !== null);
+  for (const name of ["react", "react-dom", "@xyflow/react"]) {
+    assert.equal(
+      typeof pkg.devDependencies?.[name],
+      "string",
+      `missing viewer devDependency: ${name}`,
+    );
+  }
 });
