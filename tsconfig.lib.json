@@ -5,7 +5,8 @@
     "outDir": "dist-lib",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["node"]
   },
   "include": ["src/*.ts"],
   "exclude": ["src/viewer/**", "src/main.tsx", "src/__tests__/**", "src/vite-shims.d.ts"]

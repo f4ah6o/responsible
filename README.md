@@ -97,6 +97,23 @@ if (!result.ok) {
 
 The package is ESM only and ships type declarations. Everything is re-exported from [`src/index.ts`](src/index.ts). Alternatively, use it in-repo or vendor `src/` directly.
 
+## CLI
+
+The package also ships a dependency-free `responsible` CLI (`src/cli.ts`, built to `dist-lib/cli.js`) for validating, migrating, and projecting model JSON from the terminal or a CI pipeline:
+
+```sh
+# Validate one or more model files; exits 1 if any file is invalid.
+npx responsible validate models/*.json
+
+# Migrate a responsible.v0 model to v1 and print it to stdout.
+npx responsible migrate models/order-fulfillment.json > models/order-fulfillment.v1.json
+
+# Project a model onto a responsibility boundary and print the resulting ProcessView.
+npx responsible project models/order-fulfillment.json --boundary department
+```
+
+Normal output (migrated / projected JSON) goes to stdout; diagnostics (validation issues, `ok <file>`) go to stderr, so `validate` and `migrate` compose in a pipeline. `--boundary` accepts one of `company / department / section / team / person`. Run `responsible --help` or with no arguments for usage.
+
 ## Authoring models
 
 JSON Schema (draft 2020-12) files for `responsible.v0` / `responsible.v1` are published from [`schemas/`](schemas/) at `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` and `…/responsible.v1.schema.json`, so editors can offer key completion and inline validation while you hand-write a model.
