@@ -36,6 +36,7 @@ One model, written once at the finest granularity you know, produces consistent 
 - **Hierarchical drill-down** — Activities nest arbitrarily; a parent is the composition of its children. Drill into any decomposition scope independently of boundary zoom.
 - **Interactive viewer** — single-screen React Flow viewer with Activity nodes, responsibility lanes, cross-boundary edges, and nested lane layout.
 - **Contracts and effects (`responsible.v1`)** — declare `requires` / `ensures` / `effects` on Activities. Declared effects render as node badges and dashed edges to the target boundary's lane, and hide/appear with boundary zoom under the same rule that collapses same-boundary flows.
+- **Card authoring (Magica-style)** — build a small process without writing JSON: create business-Activity cards on an editable canvas, connect them, and edit responsibility / conditions / effects in a detail panel. The deck converts to a `responsible.v1` model that flows through the same validation, projection, and boundary zoom as any other model. Card UX is the authoring layer; the responsible core is the semantic layer.
 - **Bring your own model** — load any `responsible.v0` / `responsible.v1` JSON file from the toolbar. Structural validation reports issues with JSON paths; flat models are automatically wrapped in a synthetic root. Imported models persist in `localStorage` and survive a reload; they can be removed from the toolbar.
 - **Shareable URLs** — process, boundary zoom level, and drill-down scope sync to the URL hash, so a link reproduces the exact view. For an imported model, "Copy share link" compresses the model itself into the URL (`#m=`) so anyone opening the link sees the same diagram, no upload required.
 - **Crash resilience** — a top-level error boundary and in-place error panels; unsupported models show a message instead of a blank screen.
@@ -74,6 +75,16 @@ The viewer ships with bundled sample processes (software development, document p
 Invalid models are reported with JSON-path error messages. Models containing cycles load, but affected scopes display an error panel instead of a diagram. A corrupted `#m=` value (e.g. a hand-edited link) shows the same kind of error panel rather than a blank screen; a persisted model that fails to re-validate (e.g. after a future schema change) is listed as unselectable with a "load error" marker and can be removed from the toolbar.
 
 The UI is available in Japanese and English via the **JA / EN** toggle in the toolbar (`src/viewer/i18n.ts`); the initial language follows the browser and is then remembered in `localStorage`. Model data — Activity names, responsibility values, and sample process names — is never translated.
+
+### Card authoring (Magica-style)
+
+Click **“Create with cards”** in the toolbar to build a process without writing JSON, inspired by [Magica](https://www.magicaland.org)-style business cards. The authoring screen has a card palette (left), an editable card canvas (center), a detail editor for the selected card or connection (right), and a live `responsible.v1` JSON preview with validation status (bottom).
+
+- **Activity cards** are the unit of work; **Decision cards** are Activities whose output is a decision result — branching is expressed on the outgoing connections (`when output = approved`), not as a gateway.
+- **Responsibility cards** (lane hints) are reusable responsibility presets you stamp onto cards; **Condition cards** edit `requires` / `ensures`; **Effect cards** edit `effects`. All of them edit fields of the eventual `ActivityDef` — none of them is a new core concept.
+- **Open in viewer** converts the deck to a `responsible.v1` model and imports it through the exact same path as “Load JSON”, so validation, projection, boundary zoom, drill-down, and share links all work unchanged. **Export JSON** downloads the generated model; **Load sample** restores a card deck reproducing the bundled application-approval sample. The draft deck is persisted to `localStorage` and survives a reload.
+
+The responsibility split is deliberate: **the card UX is an authoring layer; the responsible core is the semantic layer.** Cards convert to a plain `responsible.v1` document (`src/viewer/authoring/deckToModel.ts`), validation is the existing `validateProcessModel`, and no Magica-specific concept exists in `src/model.ts` or the projection core. See [`docs/card-authoring.md`](docs/card-authoring.md) for the card-to-model mapping.
 
 ## Using the core
 
@@ -184,6 +195,7 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 | [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **Normative** `responsible.v1` schema design (contracts and effects) and staged plan            |
 | [`docs/loops.md`](docs/loops.md)                                                                                | **Normative** loop (cycle) projection semantics — return edges, tau-loop rule — and staged plan |
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                                |
+| [`docs/card-authoring.md`](docs/card-authoring.md)                                                              | Card authoring layer: card types and their mapping to `responsible.v1`                          |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                             |
 | [`docs/release.md`](docs/release.md)                                                                            | Release process: `CHANGES.md`, version bump, release workflow                                   |
 
@@ -202,6 +214,7 @@ src/
   semantic.ts    semantic-core vocabulary types, Effect, invariant helpers
   effects.ts     projection of declared v1 effects onto a boundary (projectEffects)
   viewer/        React + React Flow reference viewer
+  viewer/authoring/  card authoring layer: card deck, deck -> responsible.v1 adapter, authoring UI
   __tests__/     node:test suites (invariants, projection, zoom, validation)
 ```
 

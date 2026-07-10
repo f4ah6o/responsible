@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add a Magica-style card authoring mode to the viewer (#42): a "Create with cards" toolbar toggle opens an authoring screen (card palette / editable React Flow card canvas / detail editor / live `responsible.v1` JSON preview) where Activity and Decision cards are created and connected without writing JSON. Responsibility (lane hint), Condition (`requires` / `ensures`), and Effect cards edit fields of the eventual `ActivityDef`; a Decision card converts to an ordinary Activity whose branch is expressed as a flow `mapping` (`when output = approved`), never as a gateway. The deck converts through a pure adapter (`src/viewer/authoring/deckToModel.ts`) and "Open in viewer" reuses the exact JSON-import path (`parseProcessModelJson` → `ensureRootActivity` → localStorage), so existing validation, projection, boundary zoom, drill-down, and share links work unchanged; drafts persist to `localStorage` (`responsible.authoring.deck.v1`), models export as JSON, and a built-in sample deck reproduces the `application_approval` v1 sample (asserted end-to-end by `src/__tests__/card-authoring.test.ts`). The semantic core is untouched — the layering rule ("card UX is the authoring layer, responsible core is the semantic layer") is documented in `docs/card-authoring.md` / `docs/card-authoring.ja.md` and the READMEs.
+
 ### Changed
 
 ### Fixed
