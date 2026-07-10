@@ -40,6 +40,7 @@ import {
   loadStoredImportedModels,
   removeStoredImportedModel,
 } from "./storage";
+import { AuthoringView } from "./authoring/AuthoringView";
 import { useI18n, type I18n, type Locale } from "./i18n";
 
 const DEFAULT_ZOOM_LEVEL = 1;
@@ -292,6 +293,9 @@ export function ProcessViewer() {
   const [selectedLeafId, setSelectedLeafId] = useState<Id | undefined>(() =>
     firstLeafId(initialProcess.model, initialProcess.rootActivityId),
   );
+  // Card authoring mode (issue #42) replaces the projection canvas while
+  // active; it is deliberately not synced to the URL hash.
+  const [uiMode, setUiMode] = useState<"view" | "author">("view");
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const sample = processes.find((process) => process.id === processId) ?? processes[0]!;
@@ -496,6 +500,30 @@ export function ProcessViewer() {
     [selectProcess, t],
   );
 
+  // A card-authored model enters the viewer through the exact same path as a
+  // loaded JSON file: parse → validate → synthetic root → persist → select.
+  const handleOpenAuthored = useCallback(
+    (json: string, title: string) => {
+      const outcome = buildImportedProcess(json, title, t);
+      if (!outcome.ok) {
+        setImportError(outcome.error);
+        setUiMode("view");
+        return;
+      }
+      addStoredImportedModel({
+        id: outcome.process.id,
+        title: outcome.process.title,
+        json: outcome.json,
+        importedAt: Date.now(),
+      });
+      setProcesses((prev) => [...prev, outcome.process]);
+      setImportError(undefined);
+      selectProcess(outcome.process);
+      setUiMode("view");
+    },
+    [selectProcess, t],
+  );
+
   const handleDeleteImported = useCallback(() => {
     removeStoredImportedModel(sample.id);
     setProcesses((prev) => prev.filter((process) => process.id !== sample.id));
@@ -599,6 +627,14 @@ export function ProcessViewer() {
     resetSizes();
   }, [resetSizes]);
 
+  if (uiMode === "author") {
+    return (
+      <main className="shell">
+        <AuthoringView onClose={() => setUiMode("view")} onOpenInViewer={handleOpenAuthored} />
+      </main>
+    );
+  }
+
   return (
     <SizeReportContext.Provider value={handleSizeMeasured}>
       <main className="shell">
@@ -671,6 +707,13 @@ export function ProcessViewer() {
                 error={scopeError}
               />
               <ModelLoader onLoadFile={handleLoadFile} error={importError} />
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => setUiMode("author")}
+              >
+                {t("authoringOpen")}
+              </button>
               <button
                 type="button"
                 className="secondary-action"

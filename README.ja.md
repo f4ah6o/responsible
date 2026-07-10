@@ -36,6 +36,7 @@ ProcessView = normalize(project(ActivityGraph, boundary))
 - **階層 drill-down** — Activity は無限に入れ子にでき、親は子の合成である。boundary zoom とは独立に、任意の分解スコープへ drill-down できる。
 - **インタラクティブなビューア** — Activity ノード、責任境界レーン、境界間エッジ、入れ子レーンレイアウトを備えた単一画面の React Flow ビューア。
 - **契約と作用(`responsible.v1`)** — Activity に `requires` / `ensures` / `effects` を宣言できる。宣言された effect はノード上のバッジと target 境界レーンへの破線エッジとして描画され、同一境界フローを合成するのと同じ規則で boundary zoom に応じて現れたり隠れたりする。
+- **カードで作成(Magica 風)** — JSON を書かずに小さな業務プロセスを作れる。編集可能なキャンバスに業務カードを並べてつなぎ、担当・条件・作用を詳細パネルで編集すると、カードデッキが `responsible.v1` モデルに変換され、既存の検証・射影・boundary zoom がそのまま使える。カード UX は authoring layer、responsible core は semantic layer である。
 - **自分のモデルを表示** — ツールバーから任意の `responsible.v0` / `responsible.v1` JSON ファイルを読み込める。構造検証が JSON パス付きで問題を報告し、フラットなモデルは自動的に合成ルートで包まれる。読み込んだモデルは `localStorage` に永続化され、リロードしても一覧に残る。ツールバーから削除もできる。
 - **共有可能な URL** — プロセス・boundary zoom レベル・drill-down スコープが URL ハッシュに同期されるため、リンクだけで同じ View を再現できる。読み込みモデルの場合は「共有リンクをコピー」でモデル本体を圧縮して URL(`#m=`)に埋め込むため、JSON ファイルを渡さなくても別のブラウザで同じ図を開ける。
 - **クラッシュ耐性** — トップレベルのエラーバウンダリとその場のエラーパネルにより、未対応のモデルでも空白画面にならずメッセージが表示される。
@@ -74,6 +75,16 @@ pnpm run preview    # 本番ビルドのプレビュー
 不正なモデルは JSON パス付きのエラーメッセージで報告される。循環を含むモデルは読み込めるが、該当スコープには図の代わりにエラーパネルが表示される。壊れた `#m=` 値(手で改変したリンクなど)も同様にエラーパネルを表示し、白画面にはならない。再検証に失敗した永続化モデル(将来のスキーマ変更など)は一覧に「読み込みエラー」として表示され、選択できない。ツールバーから削除できる。
 
 UI はツールバーの **JA / EN** トグル(`src/viewer/i18n.ts`)で日本語・英語を切り替えられる。初期言語はブラウザの言語設定に従い、選択後は `localStorage` に保存される。Activity 名・responsibility 値・サンプルプロセス名などのモデルデータは翻訳対象外である。
+
+### カードで作成(Magica 風)
+
+ツールバーの **「カードで作成」** をクリックすると、業務フローをカードで書ける「[マジカ](https://www.magicaland.org)」の考え方を取り入れた authoring mode に切り替わり、JSON を書かずにプロセスを作成できる。画面はカードパレット(左)、編集可能なカードキャンバス(中央)、選択したカード・接続の詳細エディタ(右)、検証ステータス付きの `responsible.v1` JSON ライブプレビュー(下)で構成される。
+
+- **業務カード(Activity card)** が作業の最小単位。**判断カード(Decision card)** は判断結果を出力する Activity であり、分岐は gateway ではなく接続側の `when output = approved` のような mapping で表現する。
+- **担当カード**(lane hint)はカードに適用できる担当プリセット、**条件カード**は `requires` / `ensures`、**作用カード**は `effects` を編集する UI である。いずれも最終的な `ActivityDef` のフィールドを編集するものであり、コアの新概念ではない。
+- **「ビューアーで開く」** はデッキを `responsible.v1` モデルに変換し、「JSON を読み込む」とまったく同じ経路で取り込むため、検証・射影・boundary zoom・drill-down・共有リンクがそのまま機能する。**「JSON をエクスポート」** で生成モデルをダウンロードでき、**「サンプルを読み込む」** で同梱の申請承認サンプルを再現したカードデッキが復元される。編集中のデッキは `localStorage` に永続化され、リロード後も残る。
+
+この責務分離は意図的なものである: **カード UX は authoring layer、responsible core は semantic layer。** カードは plain な `responsible.v1` ドキュメントに変換され(`src/viewer/authoring/deckToModel.ts`)、検証は既存の `validateProcessModel` を使い、`src/model.ts` や射影コアに Magica 固有の概念は存在しない。カードとモデルの対応は [`docs/card-authoring.ja.md`](docs/card-authoring.ja.md) を参照。
 
 ## コアの使い方
 
@@ -184,6 +195,7 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 | [`docs/responsible-v1.md`](docs/responsible-v1.md)                                                              | **規範的（normative）** な `responsible.v1` スキーマ設計（契約と作用）と段階的計画                 |
 | [`docs/loops.md`](docs/loops.ja.md)                                                                             | **規範的（normative）** なループ（サイクル）射影の意味論——戻りエッジ、tau ループ規則——と段階的計画 |
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                                   |
+| [`docs/card-authoring.md`](docs/card-authoring.ja.md)                                                           | Card authoring layer: カード種別と `responsible.v1` への対応                                       |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                                 |
 | [`docs/release.md`](docs/release.ja.md)                                                                         | リリース手順: `CHANGES.md`、バージョン更新、リリースワークフロー                                   |
 
@@ -202,6 +214,7 @@ src/
   semantic.ts    セマンティックコアの語彙型、Effect、不変条件ヘルパー
   effects.ts     宣言された v1 effect の境界への射影（projectEffects）
   viewer/        React + React Flow リファレンスビューア
+  viewer/authoring/  card authoring layer: カードデッキ、デッキ -> responsible.v1 アダプタ、authoring UI
   __tests__/     node:test スイート（不変条件、射影、ズーム、検証）
 ```
 

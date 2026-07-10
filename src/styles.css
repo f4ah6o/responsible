@@ -618,3 +618,325 @@ button {
   background: #fff;
   border: 1px solid #e5e7eb;
 }
+
+/* Card authoring mode (issue #42): authoring layer over the semantic core. */
+.authoring {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: 250px minmax(0, 1fr) 320px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "header header header"
+    "palette canvas detail"
+    "preview preview preview";
+  background: #f8fafc;
+}
+
+.authoring-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #ffffffee;
+  border-bottom: 1px solid #e2e8f0;
+}
+.authoring-title-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.authoring-title-field input {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fff;
+  min-width: 180px;
+}
+.authoring-status {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.authoring-status.is-valid {
+  color: #166534;
+  background: #dcfce7;
+}
+.authoring-status.is-invalid {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.authoring-palette {
+  grid-area: palette;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-right: 1px solid #e2e8f0;
+  background: #fff;
+  overflow-y: auto;
+}
+.authoring-palette h3,
+.authoring-detail h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 0.85rem;
+}
+.authoring-palette-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.authoring-lane-hint {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.authoring-lane-hint summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.authoring-canvas {
+  grid-area: canvas;
+  min-width: 0;
+  min-height: 0;
+}
+
+.authoring-detail {
+  grid-area: detail;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-left: 1px solid #e2e8f0;
+  background: #fff;
+  overflow-y: auto;
+}
+.authoring-detail-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.authoring-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.authoring-field input,
+.authoring-field select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  font-weight: 400;
+}
+.authoring-responsibility {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.authoring-subcards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+.authoring-subcards h4,
+.authoring-subcards h5 {
+  margin: 0;
+  color: #475569;
+  font-size: 0.78rem;
+}
+.authoring-subcard-row {
+  display: flex;
+  gap: 6px;
+}
+.authoring-subcard-row input,
+.authoring-subcard-row select {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+}
+.authoring-subcard-row button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  padding: 0 10px;
+}
+.authoring-effect-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px dashed #d8b4fe;
+  border-radius: 10px;
+  padding: 8px;
+}
+.authoring-effect-card input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.authoring-connection-route {
+  margin: 0;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.authoring-delete {
+  align-self: flex-start;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.authoring-preview {
+  grid-area: preview;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 8px 14px;
+  max-height: 40dvh;
+  overflow-y: auto;
+}
+.authoring-preview summary {
+  cursor: pointer;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.authoring-preview pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  overflow-x: auto;
+}
+.authoring-issues {
+  margin: 0 0 8px;
+  padding: 8px 12px 8px 28px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.authoring-issues code {
+  font-weight: 700;
+}
+
+/* Card nodes on the authoring canvas. */
+.react-flow__node .authoring-card {
+  width: 200px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 20px rgb(15 23 42 / 8%);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.authoring-card.is-selected {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 30%);
+}
+.authoring-card[data-card-kind="decision"] {
+  border-style: dashed;
+  border-color: #818cf8;
+}
+.authoring-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.authoring-card-kind {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #4f46e5;
+  background: #eef2ff;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.authoring-card[data-card-kind="decision"] .authoring-card-kind {
+  color: #9333ea;
+  background: #f3e8ff;
+}
+.authoring-card-title {
+  font-size: 0.85rem;
+  color: #111827;
+  overflow-wrap: anywhere;
+}
+.authoring-card-type {
+  font-size: 0.72rem;
+  color: #475569;
+}
+.authoring-card-boundary {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+}
+.authoring-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.authoring-card-chip {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.authoring-card-chip[data-chip="effect"] {
+  color: #7e22ce;
+  background: #f3e8ff;
+}
+.authoring-card .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #4f46e5;
+  border: 2px solid #fff;
+}
+.react-flow__edge.authoring-edge path {
+  stroke: #94a3b8;
+  stroke-width: 2;
+}
+.react-flow__edge.authoring-edge.is-selected path {
+  stroke: #f59e0b;
+}
+.react-flow__edge.authoring-edge .react-flow__edge-text {
+  font-size: 0.68rem;
+  fill: #475569;
+}
