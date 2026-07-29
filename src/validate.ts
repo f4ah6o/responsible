@@ -395,9 +395,9 @@ function validateEffectDefs(path: string, value: unknown, issues: ValidationIssu
       });
       continue;
     }
-    validateUnknownKeys(delivery, ["mode", "target"], `${effectPath}.delivery`, issues);
     const mode = delivery["mode"];
     if (!EFFECT_DELIVERY_MODES.includes(mode as (typeof EFFECT_DELIVERY_MODES)[number])) {
+      validateUnknownKeys(delivery, ["mode"], `${effectPath}.delivery`, issues);
       issues.push({
         path: `${effectPath}.delivery.mode`,
         message: `mode は ${EFFECT_DELIVERY_MODES.join(" / ")} のいずれかである必要があります`,
@@ -405,6 +405,7 @@ function validateEffectDefs(path: string, value: unknown, issues: ValidationIssu
       continue;
     }
     if (mode === "directed") {
+      validateUnknownKeys(delivery, ["mode", "target"], `${effectPath}.delivery`, issues);
       const target = delivery["target"];
       if (!isResponsibility(target) || Object.keys(target).length === 0) {
         issues.push({
@@ -413,6 +414,8 @@ function validateEffectDefs(path: string, value: unknown, issues: ValidationIssu
             'directed の target は空でない Responsibility レコード（例: { "role": "Manager" }）である必要があります',
         });
       }
+    } else {
+      validateUnknownKeys(delivery, ["mode"], `${effectPath}.delivery`, issues);
     }
   }
 }

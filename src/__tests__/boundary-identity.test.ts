@@ -26,6 +26,19 @@ test("typed boundary values never share an identity", () => {
   assert.equal(new Set(ids).size, values.length);
 });
 
+test("object boundary ids are independent of insertion order and locale", () => {
+  const first = boundaryOfResponsibility(
+    { team: { z: "last", ä: "umlaut" } } as unknown as Responsibility,
+    "team",
+  );
+  const second = boundaryOfResponsibility(
+    { team: { ä: "umlaut", z: "last" } } as unknown as Responsibility,
+    "team",
+  );
+
+  assert.equal(first, second);
+});
+
 test("multi-axis boundary codec round-trips delimiter-heavy keys and values", () => {
   const responsibility = {
     "team|name": "a:b|c/d,%+",

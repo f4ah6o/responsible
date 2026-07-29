@@ -76,9 +76,18 @@ export function formatBoundaryValue(value: BoundaryValue | undefined): string {
   }
 
   const entries = Object.entries(value)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareCodeUnits(a, b))
     .map(([key, nested]) => [key, formatBoundaryValue(nested)] as const);
   return `${CODEC_PREFIX}o${JSON.stringify(entries)}`;
+}
+
+function compareCodeUnits(a: string, b: string): number {
+  const length = Math.min(a.length, b.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = a.charCodeAt(index) - b.charCodeAt(index);
+    if (difference !== 0) return difference;
+  }
+  return a.length - b.length;
 }
 
 /**

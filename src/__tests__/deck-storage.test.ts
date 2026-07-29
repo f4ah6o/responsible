@@ -6,7 +6,13 @@ import {
   loadStoredDeck,
   saveStoredDeck,
 } from "../viewer/authoring/deckStorage.js";
-import { emptyDeck } from "../viewer/authoring/cardDeck.js";
+import {
+  addCard,
+  createCard,
+  emptyDeck,
+  updateCard,
+  validateCardDeck,
+} from "../viewer/authoring/cardDeck.js";
 import { sampleDeck } from "../viewer/authoring/sampleDeck.js";
 
 const STORAGE_KEY = "responsible.authoring.deck.v1";
@@ -61,6 +67,25 @@ test("save / load / clear round-trip through localStorage", () => {
 
   clearStoredDeck();
   assert.equal(loadStoredDeck(), undefined);
+});
+
+test("reload preserves a draft with an unfinished Decision outcome", () => {
+  installMockLocalStorage();
+  let deck = emptyDeck();
+  deck = addCard(deck, createCard(deck, "decision", { x: 0, y: 0 }));
+  deck = updateCard(deck, "decision-1", { outcomes: ["approved", "rejected", ""] });
+
+  saveStoredDeck(deck);
+  const restored = loadStoredDeck();
+
+  assert.ok(restored);
+  assert.equal(restored.cards.length, 1);
+  assert.deepEqual(restored.cards[0]?.outcomes, ["approved", "rejected", ""]);
+  assert.equal(
+    validateCardDeck(restored).some((issue) => issue.path.endsWith("outcomes[2]")),
+    true,
+  );
+  clearStoredDeck();
 });
 
 test("loadStoredDeck tolerates corrupted JSON in storage", () => {

@@ -79,6 +79,11 @@ export type CardDeckValidationIssue = Readonly<{
   message: string;
 }>;
 
+export type CardDeckValidationOptions = Readonly<{
+  /** Allow blank/duplicate blank outcomes while a draft editor is mid-edit. */
+  allowIncomplete?: boolean;
+}>;
+
 export function emptyDeck(title = ""): CardDeck {
   return { version: CARD_DECK_VERSION, title, cards: [], connections: [], laneHints: [] };
 }
@@ -362,8 +367,12 @@ function isLaneHint(value: unknown): value is LaneHintCard {
  * ambiguous ids, dangling references, invalid geometry, or stale decision
  * branches when it is exported or restored.
  */
-export function validateCardDeck(deck: CardDeck): readonly CardDeckValidationIssue[] {
+export function validateCardDeck(
+  deck: CardDeck,
+  options: CardDeckValidationOptions = {},
+): readonly CardDeckValidationIssue[] {
   const issues: CardDeckValidationIssue[] = [];
+  const allowIncomplete = options.allowIncomplete === true;
   const cardIds = new Set<string>();
   const connectionIds = new Set<string>();
   const laneHintIds = new Set<string>();
@@ -394,6 +403,7 @@ export function validateCardDeck(deck: CardDeck): readonly CardDeckValidationIss
       const outcomeIds = new Set<string>();
       for (const [outcomeIndex, outcome] of trimmedOutcomes.entries()) {
         if (outcome.length === 0) {
+          if (allowIncomplete) continue;
           issues.push({
             path: `$.cards[${index}].outcomes[${outcomeIndex}]`,
             message: "Decision outcome は空でない文字列である必要があります",
@@ -524,5 +534,8 @@ export function parseCardDeck(value: unknown): CardDeck | undefined {
     connections,
     laneHints,
   };
-  return validateCardDeck(deck).length === 0 ? deck : undefined;
+  // Persistence must preserve an editable draft (for example, the empty
+  // outcome row created before its label is typed), while still rejecting
+  // unsafe ids, dangling references, invalid geometry, and stale branches.
+  return validateCardDeck(deck, { allowIncomplete: true }).length === 0 ? deck : undefined;
 }

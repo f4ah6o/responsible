@@ -162,6 +162,30 @@ test("a malformed v1 effect delivery is rejected by both the schema and validate
   assert.equal(validateProcessModel(model).ok, false);
 });
 
+test("broadcast and observable deliveries reject target in both schema and runtime", () => {
+  for (const mode of ["broadcast", "observable"] as const) {
+    const model = {
+      schemaVersion: "responsible.v1",
+      activities: {
+        a: {
+          id: "a",
+          input: "X",
+          output: "Y",
+          effects: [
+            {
+              payload: { kind: "command", schema: "S" },
+              delivery: { mode, target: { role: "Manager" } },
+            },
+          ],
+        },
+      },
+      flows: [],
+    };
+    assert.equal(validateV1(model), false, mode);
+    assert.equal(validateProcessModel(model).ok, false, mode);
+  }
+});
+
 test("the runtime validator and JSON Schema agree on TypeDef and Flow conformance", () => {
   const valid = {
     schemaVersion: "responsible.v0",
