@@ -161,3 +161,55 @@ test("a malformed v1 effect delivery is rejected by both the schema and validate
   assert.equal(validateV1(model), false);
   assert.equal(validateProcessModel(model).ok, false);
 });
+
+test("broadcast and observable deliveries reject target in both schema and runtime", () => {
+  for (const mode of ["broadcast", "observable"] as const) {
+    const model = {
+      schemaVersion: "responsible.v1",
+      activities: {
+        a: {
+          id: "a",
+          input: "X",
+          output: "Y",
+          effects: [
+            {
+              payload: { kind: "command", schema: "S" },
+              delivery: { mode, target: { role: "Manager" } },
+            },
+          ],
+        },
+      },
+      flows: [],
+    };
+    assert.equal(validateV1(model), false, mode);
+    assert.equal(validateProcessModel(model).ok, false, mode);
+  }
+});
+
+test("the runtime validator and JSON Schema agree on TypeDef and Flow conformance", () => {
+  const valid = {
+    schemaVersion: "responsible.v0",
+    activities: { a: { id: "a", input: "Text", output: "Text" } },
+    types: {
+      Text: { kind: "primitive", name: "text" },
+      Record: { kind: "record", fields: { value: { type: "Text", required: true } } },
+      Choice: { kind: "union", variants: { left: "Text", right: "Record" } },
+      Result: { kind: "result", ok: "Record", error: "Text" },
+    },
+    flows: [{ from: "a", to: "a", id: "f", mapping: "m", contract: "c" }],
+  };
+  assert.equal(validateV0(valid), true, JSON.stringify(validateV0.errors, null, 2));
+  assert.equal(validateProcessModel(valid).ok, true);
+
+  const invalidCases = [
+    { ...valid, types: 42 },
+    { ...valid, types: { Bad: { kind: "unknown" } } },
+    { ...valid, types: { Bad: { kind: "record", fields: { value: { type: 42 } } } } },
+    { ...valid, flows: [{ from: "a", to: "a", id: "" }] },
+    { ...valid, flows: [{ from: "a", to: "a", mapping: 42 }] },
+  ];
+  for (const model of invalidCases) {
+    assert.equal(validateV0(model), false, JSON.stringify(model));
+    assert.equal(validateProcessModel(model).ok, false, JSON.stringify(model));
+  }
+});

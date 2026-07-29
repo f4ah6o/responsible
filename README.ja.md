@@ -59,6 +59,9 @@ pnpm run check      # フォーマット + lint チェック
 pnpm run typecheck  # tsc --noEmit
 pnpm test           # node:test(テスト依存ゼロ)
 pnpm run build      # dist/ に本番ビルド
+pnpm run build:lib  # npm パッケージ用ライブラリを dist-lib/ にビルド
+pnpm run lint:pkg   # publint + arethetypeswrong によるパッケージ検証
+pnpm run package:check # pack/install/import/CLI のパッケージ smoke test
 pnpm run preview    # 本番ビルドのプレビュー
 ```
 
@@ -128,6 +131,7 @@ npx responsible project models/order-fulfillment.json --boundary department
 ## モデルを書く(エディタ支援)
 
 `responsible.v0` / `responsible.v1` の JSON Schema(draft 2020-12)を [`schemas/`](schemas/) から `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` / `…/responsible.v1.schema.json` として配信している。モデル JSON を手書きする際、エディタでのキー補完とインライン検証に使える。
+`schemas/` は npm パッケージには含めず、正規 Schema は GitHub Pages から配信する。
 
 モデル JSON に `$schema` フィールドを書くだけで、VSCode の組み込み JSON 言語サポートが自動的に読み込む:
 
@@ -152,7 +156,7 @@ npx responsible project models/order-fulfillment.json --boundary department
 }
 ```
 
-この Schema はエディタ支援のための補助であり、正ではない: [`src/model.ts`](src/model.ts) から手書きで作成しており、未知キーについてはランタイムのバリデータより厳格だが、`ActivityDef.id` がキーと一致すること・`flows` の参照先が解決すること・分解階層の循環がないことといった参照整合性チェックは表現していない — 引き続き `validateProcessModel`(後述)が正である。`$schema` プロパティは常に許容され、`validateProcessModel` はこれを無視する。
+この Schema はエディタ支援のための補助であり、[`src/model.ts`](src/model.ts) から手書きで作成している。構造フィールドの契約はランタイムバリデータと意図的に一致させ、JSON Schema では表現できない `ActivityDef.id` とキーの一致、`flows` の参照先、分解階層の循環といった参照整合性を `validateProcessModel`(後述)が追加で検査する。`$schema` プロパティは意味論に影響せず許容される。
 
 ## モデルスキーマ(`responsible.v0`)
 
@@ -235,7 +239,7 @@ src/
 Issue と Pull Request を歓迎する。PR を送る前に、品質ゲート一式がローカルで通ることを確認してほしい。CI もすべての PR で同じステップを実行する。
 
 ```sh
-pnpm run check && pnpm run typecheck && pnpm test && pnpm run build
+pnpm run check && pnpm run typecheck && pnpm test && pnpm run build && pnpm run build:lib && pnpm run lint:pkg && pnpm run package:check
 ```
 
 モデルの意味論に関わる変更については [`docs/semantic-core.md`](docs/semantic-core.md) が規範である。コード・テスト・当該ドキュメントの整合性を保つこと。

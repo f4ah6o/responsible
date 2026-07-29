@@ -59,6 +59,9 @@ pnpm run check      # format + lint check
 pnpm run typecheck  # tsc --noEmit
 pnpm test           # node:test, zero test dependencies
 pnpm run build      # production build to dist/
+pnpm run build:lib  # npm package library build to dist-lib/
+pnpm run lint:pkg   # publint + arethetypeswrong package checks
+pnpm run package:check # pack, install, import, and CLI smoke test
 pnpm run preview    # preview the production build
 ```
 
@@ -128,6 +131,7 @@ Normal output (migrated / projected JSON) goes to stdout; diagnostics (validatio
 ## Authoring models
 
 JSON Schema (draft 2020-12) files for `responsible.v0` / `responsible.v1` are published from [`schemas/`](schemas/) at `https://f4ah6o.github.io/responsible/schemas/responsible.v0.schema.json` and `…/responsible.v1.schema.json`, so editors can offer key completion and inline validation while you hand-write a model.
+The npm package does not include `schemas/`; the canonical schemas are distributed through GitHub Pages.
 
 Add a `$schema` field to your model JSON and VSCode's built-in JSON language support picks it up automatically:
 
@@ -152,7 +156,7 @@ Alternatively, map file patterns to a schema in VSCode's `settings.json` without
 }
 ```
 
-The schemas are an editor-support aid, not the source of truth: they are hand-written (not generated) from [`src/model.ts`](src/model.ts) and are stricter than the runtime validator on unknown keys, but they don't express referential checks like `ActivityDef.id` matching its key, `flows` endpoints resolving, or decomposition-cycle detection — `validateProcessModel` (see below) remains authoritative. A `$schema` property is always accepted and ignored by `validateProcessModel`.
+The schemas are an editor-support aid: they are hand-written (not generated) from [`src/model.ts`](src/model.ts), and the runtime validator and schemas intentionally share the same structural field contract. JSON Schema does not express referential checks like `ActivityDef.id` matching its key, `flows` endpoints resolving, or decomposition-cycle detection — `validateProcessModel` (see below) adds those checks. A `$schema` property is accepted and ignored semantically by `validateProcessModel`.
 
 ## Model schema (`responsible.v0`)
 
@@ -235,7 +239,7 @@ Notable changes are tracked in [`CHANGES.md`](CHANGES.md).
 Issues and pull requests are welcome. Before submitting a PR, please make sure the full quality gate passes locally — CI runs the same steps on every PR:
 
 ```sh
-pnpm run check && pnpm run typecheck && pnpm test && pnpm run build
+pnpm run check && pnpm run typecheck && pnpm test && pnpm run build && pnpm run build:lib && pnpm run lint:pkg && pnpm run package:check
 ```
 
 For changes to the model semantics, [`docs/semantic-core.md`](docs/semantic-core.md) is normative; please keep code, tests, and that document consistent.

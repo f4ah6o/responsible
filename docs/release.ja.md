@@ -18,7 +18,7 @@
    [`Release`](../.github/workflows/release.yml)(`workflow_dispatch`)を、
    `version` に同じ値(先頭に `v` を付けない。例: `0.2.0`)を指定して実行する。
    ワークフローは以下を行う。
-   - 品質ゲート(`check` / `typecheck` / `test` / `build`)を実行する
+   - 品質ゲート(`check` / `typecheck` / `test` / `build` / `build:lib` / `lint:pkg` / `package:check`)を実行する
    - 入力値が `package.json` の `version` と一致することを検証する
    - 該当する `CHANGES.md` の節を抽出する(`tools/extract-changelog.mjs`)
    - `v<version>` タグを作成して push する

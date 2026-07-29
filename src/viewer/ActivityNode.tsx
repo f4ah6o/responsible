@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 
+import { decodeBoundaryId, displayBoundaryValue } from "../boundary.js";
 import type { ActivityNodeData, MemberInfo } from "./projectionToFlow";
 import { useSizeReporter } from "./SizeReportContext";
 import { useI18n, type MessageKey } from "./i18n";
@@ -161,10 +162,9 @@ export function ActivityNode({ data, selected }: NodeProps<ActivityNodeType>) {
 }
 
 // A boundary may be a full path "company:X|department:Y|team:Z" — show only
-// the leaf value.
+// the leaf value. Decode the canonical identity instead of parsing display
+// punctuation, because a value may itself contain `:` or `|`.
 function leafBoundaryLabel(boundary: string): string {
-  const parts = boundary.split("|");
-  const last = parts[parts.length - 1] ?? boundary;
-  const idx = last.indexOf(":");
-  return idx >= 0 ? last.slice(idx + 1) : last;
+  const last = decodeBoundaryId(boundary).at(-1);
+  return last ? displayBoundaryValue(last.value) : boundary;
 }

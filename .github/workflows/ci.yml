@@ -39,3 +39,12 @@ jobs:
 
       - name: Build
         run: vp run build
+
+      - name: Build library
+        run: vp run build:lib
+
+      - name: Validate package metadata
+        run: vp run lint:pkg
+
+      - name: Smoke test packed package
+        run: vp run package:check

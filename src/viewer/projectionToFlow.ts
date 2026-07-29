@@ -1,9 +1,14 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import { HIERARCHICAL_BOUNDARY_ORDER } from "../hierarchy.js";
+import { projectedFlowKey } from "../projectedId.js";
 import type { ActivityDef, Id, ProcessView, ProjectedActivity } from "../model.js";
 import type { Effect } from "../semantic.js";
-import { buildLaneHierarchy, laneIdForBoundary } from "./buildLaneHierarchy.js";
+import {
+  buildLaneHierarchy,
+  laneBoundaryIdentity,
+  laneIdForBoundary,
+} from "./buildLaneHierarchy.js";
 import { layoutHierarchy } from "./layoutHierarchy.js";
 import type { MeasuredSize } from "./SizeReportContext.js";
 export type { LaneNodeData } from "./layoutHierarchy.js";
@@ -136,7 +141,7 @@ export function projectionToFlow(
   });
 
   const edges: Edge[] = view.flows.map((flow) => ({
-    id: `e:${flow.from}->${flow.to}`,
+    id: `e:${encodeURIComponent(projectedFlowKey(flow.from, flow.to))}`,
     source: flow.from,
     target: flow.to,
     markerEnd: { type: MarkerType.ArrowClosed },
@@ -145,7 +150,10 @@ export function projectionToFlow(
 
   return {
     nodes: [...laneNodes, ...activityNodes],
-    edges: [...edges, ...effectEdges(effects, leafToProjectedId, laneNodes, zoomLevel)],
+    edges: [
+      ...edges,
+      ...effectEdges(effects, leafToProjectedId, laneNodes, hierarchy.laneIdByBoundary, zoomLevel),
+    ],
     lanes,
   };
 }
@@ -159,6 +167,7 @@ function effectEdges(
   effects: readonly Effect[] | undefined,
   leafToProjectedId: ReadonlyMap<Id, Id>,
   laneNodes: readonly Node[],
+  laneIdByBoundary: ReadonlyMap<string, string>,
   zoomLevel: number,
 ): Edge[] {
   if (!effects) return [];
@@ -172,10 +181,14 @@ function effectEdges(
     if (effect.delivery.mode !== "directed") continue;
     const sourceNodeId = leafToProjectedId.get(effect.source.activityId);
     if (sourceNodeId === undefined) continue;
-    const laneId = laneIdForBoundary(effect.delivery.target, pathKeys);
+    const laneId =
+      laneIdByBoundary.get(laneBoundaryIdentity(effect.delivery.target, pathKeys)) ??
+      laneIdForBoundary(effect.delivery.target, pathKeys);
     if (!laneIds.has(laneId)) continue;
 
-    const id = `fx:${sourceNodeId}->${laneId}:${effect.payload.schema}`;
+    const id = `fx:${encodeURIComponent(
+      JSON.stringify([sourceNodeId, laneId, effect.payload.schema]),
+    )}`;
     if (seen.has(id)) continue;
     seen.add(id);
 

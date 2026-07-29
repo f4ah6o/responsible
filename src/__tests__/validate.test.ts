@@ -33,6 +33,55 @@ test("validateProcessModel accepts a well-formed model", () => {
   assert.equal(Object.keys(result.model.activities).length, 2);
 });
 
+test("validateProcessModel accepts all TypeDef variants and Flow optional fields", () => {
+  const result = validateProcessModel({
+    ...validModel,
+    types: {
+      Text: { kind: "primitive", name: "text" },
+      Order: {
+        kind: "record",
+        fields: { id: { type: "Text", required: true } },
+      },
+      Outcome: { kind: "union", variants: { ok: "Order", error: "Text" } },
+      Result: { kind: "result", ok: "Order", error: "Text" },
+    },
+    flows: [{ from: "a", to: "b", id: "flow-1", mapping: "map", contract: "contract" }],
+  });
+  assert.equal(result.ok, true, JSON.stringify(result));
+});
+
+test("validateProcessModel rejects malformed TypeDefs and Flow optional fields", () => {
+  const cases: readonly [string, unknown][] = [
+    ["types", { ...validModel, types: 42 }],
+    ["kind", { ...validModel, types: { Bad: { kind: "unknown" } } }],
+    ["fields", { ...validModel, types: { Bad: { kind: "record", fields: 42 } } }],
+    [
+      "field type",
+      { ...validModel, types: { Bad: { kind: "record", fields: { x: { type: 42 } } } } },
+    ],
+    ["flow id", { ...validModel, flows: [{ from: "a", to: "b", id: "" }] }],
+    ["flow mapping", { ...validModel, flows: [{ from: "a", to: "b", mapping: 42 }] }],
+    ["flow contract", { ...validModel, flows: [{ from: "a", to: "b", contract: {} }] }],
+  ];
+  for (const [label, value] of cases) {
+    const result = validateProcessModel(value);
+    assert.equal(result.ok, false, label);
+  }
+});
+
+test("runtime validation rejects unknown fields just like the published schema", () => {
+  const result = validateProcessModel({
+    ...validModel,
+    activities: { a: { ...validModel.activities.a, typo: true } },
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok)
+    assert.equal(
+      result.issues.some((issue) => issue.path.endsWith(".typo")),
+      true,
+    );
+});
+
 test("validateProcessModel rejects non-object input", () => {
   assert.deepEqual(issuePaths("not a model"), ["$"]);
   assert.deepEqual(issuePaths(null), ["$"]);

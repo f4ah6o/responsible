@@ -17,7 +17,7 @@ This describes how to cut a release of `@f4ah6o/responsible`.
 3. **Run the release workflow.** From the Actions tab, run
    [`Release`](../.github/workflows/release.yml) (`workflow_dispatch`) with
    `version` set to the same value (no leading `v`, e.g. `0.2.0`). It will:
-   - run the quality gate (`check`, `typecheck`, `test`, `build`);
+   - run the quality gate (`check`, `typecheck`, `test`, `build`, `build:lib`, `lint:pkg`, and `package:check`);
    - verify the input matches `package.json`'s `version`;
    - extract the matching `CHANGES.md` section
      (`tools/extract-changelog.mjs`);

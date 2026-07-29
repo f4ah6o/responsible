@@ -87,6 +87,11 @@ function flowOf(connection: FlowConnection): FlowDef {
 export function deckToProcessModel(deck: CardDeck): ProcessModel {
   const activities: Record<Id, ActivityDef> = {};
   for (const card of deck.cards) {
+    if (activities[card.id] !== undefined) {
+      throw new Error(
+        `invalid CardDeck: duplicate card id "${card.id}" would overwrite an Activity`,
+      );
+    }
     activities[card.id] = activityOf(card);
   }
   return {

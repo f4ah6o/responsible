@@ -116,6 +116,8 @@ interface BoundaryProjection<In, Out> {
 
 For the current TypeScript core, `projectByResponsibilityBoundary(model, view)` is the concrete v0 projection function. It projects leaf Activities for the selected Activity scope and boundary expression, then returns a JSON-serializable `ProcessView`.
 
+Boundary identity is not a display label. `boundaryOf` uses typed canonical encoding for booleans, numbers, arrays, objects, and delimiter-heavy multi-axis paths; display code decodes that identity only for human-readable lane labels. Consumers must not split a `BoundaryId` on `:` or `|` to recover its structure.
+
 ## Responsibility Boundary Normal Form
 
 Responsibility Boundary Normal Form, or RBNF, is primarily a quotient view by boundary-crossing observational equivalence.

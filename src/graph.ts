@@ -113,14 +113,25 @@ export function layoutProjectedGraph(
   );
   const height = Math.max(280, marginY * 2 + Math.max(1, laneLabels.length) * laneGap);
   const laneIndex = new Map(laneLabels.map((label, index) => [label, index]));
-  const lanes: GraphLane[] = laneLabels.map((label, index) => ({
-    id: `lane:${label}`,
-    label,
-    x: 44,
-    y: marginY + index * laneGap - laneHeight / 2,
-    width: width - 88,
-    height: laneHeight,
-  }));
+  const occupiedIds = new Set(view.activities.map((activity) => activity.id));
+  const lanes: GraphLane[] = laneLabels.map((label, index) => {
+    const base = `lane-id:${encodeURIComponent(label)}`;
+    let id = base;
+    let suffix = 1;
+    while (occupiedIds.has(id)) {
+      id = `${base}~${suffix}`;
+      suffix += 1;
+    }
+    occupiedIds.add(id);
+    return {
+      id,
+      label,
+      x: 44,
+      y: marginY + index * laneGap - laneHeight / 2,
+      width: width - 88,
+      height: laneHeight,
+    };
+  });
 
   const nodes: GraphNode[] = view.activities.map((node, index) => {
     const activityIds = node.kind === "atomic" ? [node.activityId] : [...node.activityIds];

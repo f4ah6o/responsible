@@ -18,6 +18,7 @@ import {
   updateCard,
   updateConnection,
   updateLaneHint,
+  validateCardDeck,
   type ActivityCardPatch,
   type CardDeck,
   type CardKind,
@@ -50,8 +51,17 @@ export function AuthoringView({ onClose, onOpenInViewer }: AuthoringViewProps) {
     saveStoredDeck(deck);
   }, [deck]);
 
-  const model = useMemo(() => deckToProcessModel(deck), [deck]);
+  const model = useMemo(() => {
+    try {
+      return deckToProcessModel(deck);
+    } catch {
+      // A malformed in-memory draft is represented as an invalid empty model
+      // so the authoring screen can report issues instead of blank-screening.
+      return deckToProcessModel(emptyDeck(deck.title));
+    }
+  }, [deck]);
   const validation = useMemo(() => validateProcessModel(model), [model]);
+  const deckIssues = useMemo(() => validateCardDeck(deck), [deck]);
   const json = useMemo(() => JSON.stringify(model, null, 2), [model]);
 
   const handleAddCard = useCallback((kind: CardKind) => {
@@ -145,7 +155,8 @@ export function AuthoringView({ onClose, onOpenInViewer }: AuthoringViewProps) {
     onOpenInViewer(json, deckTitle);
   }, [onOpenInViewer, json, deckTitle]);
 
-  const issues = validation.ok ? [] : validation.issues;
+  const issues = [...(validation.ok ? [] : validation.issues), ...deckIssues];
+  const isValid = validation.ok && deckIssues.length === 0;
 
   return (
     <div className="authoring">
@@ -163,10 +174,10 @@ export function AuthoringView({ onClose, onOpenInViewer }: AuthoringViewProps) {
           />
         </label>
         <span
-          className={validation.ok ? "authoring-status is-valid" : "authoring-status is-invalid"}
+          className={isValid ? "authoring-status is-valid" : "authoring-status is-invalid"}
           role="status"
         >
-          {validation.ok ? t("validationOk") : t("validationIssues", { count: issues.length })}
+          {isValid ? t("validationOk") : t("validationIssues", { count: issues.length })}
         </span>
         <button type="button" className="secondary-action" onClick={handleLoadSample}>
           {t("loadSampleDeck")}
@@ -178,7 +189,7 @@ export function AuthoringView({ onClose, onOpenInViewer }: AuthoringViewProps) {
           type="button"
           className="secondary-action"
           onClick={handleExport}
-          disabled={!validation.ok}
+          disabled={!isValid}
         >
           {t("exportDeckJson")}
         </button>
@@ -186,7 +197,7 @@ export function AuthoringView({ onClose, onOpenInViewer }: AuthoringViewProps) {
           type="button"
           className="primary-action"
           onClick={handleOpenInViewer}
-          disabled={!validation.ok}
+          disabled={!isValid}
         >
           {t("openInViewer")}
         </button>
@@ -266,7 +277,7 @@ export function AuthoringView({ onClose, onOpenInViewer }: AuthoringViewProps) {
         onDeleteConnection={handleDeleteConnection}
       />
       <section className="authoring-preview">
-        {!validation.ok && (
+        {!isValid && (
           <ul className="authoring-issues" role="alert">
             {issues.slice(0, MAX_SHOWN_ISSUES).map((issue, index) => (
               <li key={index}>

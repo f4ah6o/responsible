@@ -261,6 +261,81 @@ test("projection is deterministic", () => {
   assert.equal(first, second);
 });
 
+test("composite ids distinguish source ids containing the legacy delimiter", () => {
+  const m = model(
+    {
+      start: { team: "start" },
+      "a+b": { team: "same" },
+      c: { team: "same" },
+      a: { team: "same" },
+      "b+c": { team: "same" },
+      end: { team: "end" },
+    },
+    [
+      ["start", "a+b"],
+      ["start", "a"],
+      ["a+b", "c"],
+      ["a", "b+c"],
+      ["c", "end"],
+      ["b+c", "end"],
+    ],
+  );
+  const composites = projectDagByResponsibilityBoundary(m, teamView).activities.filter(
+    (activity) => activity.kind === "composite",
+  );
+  assert.equal(composites.length, 2);
+  assert.notEqual(composites[0]!.id, composites[1]!.id);
+});
+
+test("an atomic id cannot collide with a composite id", () => {
+  const m = model(
+    {
+      start: { team: "start" },
+      a: { team: "same" },
+      b: { team: "same" },
+      "composite:a+b": { team: "same" },
+      end: { team: "end" },
+    },
+    [
+      ["start", "a"],
+      ["a", "b"],
+      ["b", "end"],
+      ["start", "composite:a+b"],
+      ["composite:a+b", "end"],
+    ],
+  );
+  const projected = projectDagByResponsibilityBoundary(m, teamView);
+  const ids = projected.activities.map((activity) => activity.id);
+  assert.equal(new Set(ids).size, ids.length);
+  const composite = projected.activities.find((activity) => activity.kind === "composite");
+  assert.ok(composite);
+  assert.notEqual(composite.id, "composite:a+b");
+});
+
+test("projected flow deduplication preserves arrow-containing endpoint pairs", () => {
+  const m = model(
+    {
+      start: { team: "start" },
+      a: { team: "a" },
+      "a->b": { team: "ab" },
+      "b->c": { team: "bc" },
+      c: { team: "c" },
+    },
+    [
+      ["start", "a"],
+      ["start", "a->b"],
+      ["a", "b->c"],
+      ["a->b", "c"],
+    ],
+  );
+  const projected = projectDagByResponsibilityBoundary(m, teamView);
+  assert.equal(projected.flows.length, 4);
+  assert.equal(
+    new Set(projected.flows.map((flow) => JSON.stringify([flow.from, flow.to]))).size,
+    4,
+  );
+});
+
 // --- Rejections ------------------------------------------------------------
 
 test("cycles are rejected with an explicit error", () => {
@@ -293,6 +368,27 @@ test("weakly disconnected scopes are rejected", () => {
   assert.throws(
     () => projectDagByResponsibilityBoundary(disconnected, teamView),
     /weakly connected/,
+  );
+});
+
+test("flow endpoints do not silently discard an orphan Activity", () => {
+  const m = model(
+    {
+      a: { team: "t1" },
+      b: { team: "t2" },
+      orphan: { team: "t3" },
+    },
+    [["a", "b"]],
+  );
+  assert.throws(() => projectDagByResponsibilityBoundary(m, teamView), /disconnected: orphan/);
+});
+
+test("an isolated Activity is retained as an atomic projection", () => {
+  const m = model({ orphan: { team: "t3" } }, []);
+  const projected = projectDagByResponsibilityBoundary(m, teamView);
+  assert.deepEqual(
+    projected.activities.map((activity) => activity.id),
+    ["orphan"],
   );
 });
 
