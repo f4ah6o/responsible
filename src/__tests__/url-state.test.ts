@@ -37,12 +37,12 @@ test("write / read round-trips", () => {
   const hash = writeViewerUrlState({
     processId: "doc publishing",
     zoomLevel: 4,
-    scopePath: ["root", "review"],
+    scopePath: ["root", "review,a", "%", "+", "/", "ユニコード"],
   });
   const state = readViewerUrlState(hash);
   assert.equal(state.processId, "doc publishing");
   assert.equal(state.zoomLevel, 4);
-  assert.deepEqual(state.scopePath, ["root", "review"]);
+  assert.deepEqual(state.scopePath, ["root", "review,a", "%", "+", "/", "ユニコード"]);
 });
 
 test("readViewerUrlState parses m= as modelParam", () => {
@@ -59,7 +59,7 @@ test("writeViewerUrlState embeds modelParam as m= in place of p=", () => {
     scopePath: ["root", "child"],
     modelParam: "abc123",
   });
-  assert.equal(hash, "#m=abc123&z=2&s=root%2Cchild");
+  assert.equal(hash, "#m=abc123&z=2&s=%5B%22root%22%2C%22child%22%5D");
 });
 
 test("encodeModelParam / decodeModelParam round-trip the bundled example models", async () => {

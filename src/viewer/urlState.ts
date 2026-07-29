@@ -6,8 +6,8 @@ export type ViewerUrlState = Readonly<{
 }>;
 
 /**
- * Parses viewer state from a URL hash (`#p=<processId>&z=<level>&s=<id,id>`,
- * or `#m=<compressed-model>&z=<level>&s=<id,id>` for an embedded model).
+ * Parses viewer state from a URL hash (`#p=<processId>&z=<level>&s=<json-array>`,
+ * or `#m=<compressed-model>&z=<level>&s=<json-array>` for an embedded model).
  * Unknown or malformed parameters are ignored; callers re-validate the values
  * against the actual model before applying them.
  */
@@ -40,7 +40,17 @@ export function readViewerUrlState(hash: string): ViewerUrlState {
 
   const scope = params.get("s");
   if (scope) {
-    const path = scope.split(",").filter((id) => id.length > 0);
+    let path: string[] = [];
+    try {
+      const parsed: unknown = JSON.parse(scope);
+      if (Array.isArray(parsed) && parsed.every((id) => typeof id === "string" && id.length > 0)) {
+        path = parsed;
+      }
+    } catch {
+      // Read old comma-separated links for backwards compatibility. New
+      // links always use JSON so commas in an Activity id stay data.
+      path = scope.split(",").filter((id) => id.length > 0);
+    }
     if (path.length > 0) state.scopePath = path;
   }
 
@@ -68,7 +78,7 @@ export function writeViewerUrlState(
     params.set("p", state.processId);
   }
   params.set("z", String(state.zoomLevel));
-  if (state.scopePath.length > 1) params.set("s", state.scopePath.join(","));
+  if (state.scopePath.length > 1) params.set("s", JSON.stringify(state.scopePath));
   return `#${params.toString()}`;
 }
 

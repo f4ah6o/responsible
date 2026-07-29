@@ -74,6 +74,11 @@ export type CardDeck = Readonly<{
   laneHints: readonly LaneHintCard[];
 }>;
 
+export type CardDeckValidationIssue = Readonly<{
+  path: string;
+  message: string;
+}>;
+
 export function emptyDeck(title = ""): CardDeck {
   return { version: CARD_DECK_VERSION, title, cards: [], connections: [], laneHints: [] };
 }
@@ -147,10 +152,59 @@ function merge<T extends object>(base: T, patch: Readonly<Record<string, unknown
 }
 
 export function updateCard(deck: CardDeck, id: string, patch: ActivityCardPatch): CardDeck {
-  return {
+  const previous = deck.cards.find((card) => card.id === id);
+  const nextDeck: CardDeck = {
     ...deck,
     cards: deck.cards.map((card) => (card.id === id ? merge(card, patch) : card)),
   };
+  if (!previous || patch.outcomes === undefined || previous.kind !== "decision") return nextDeck;
+
+  const nextCard = nextDeck.cards.find((card) => card.id === id);
+  if (!nextCard) return nextDeck;
+  return {
+    ...nextDeck,
+    connections: synchronizeDecisionOutcomes(
+      nextDeck.connections,
+      previous.outcomes,
+      nextCard.outcomes,
+      id,
+    ),
+  };
+}
+
+function synchronizeDecisionOutcomes(
+  connections: readonly FlowConnection[],
+  previousOutcomes: readonly string[],
+  nextOutcomes: readonly string[],
+  decisionId: string,
+): readonly FlowConnection[] {
+  const previous = previousOutcomes.map((outcome) => outcome.trim());
+  const next = nextOutcomes.map((outcome) => outcome.trim());
+  const nextSet = new Set(next.filter(Boolean));
+  const previousSet = new Set(previous.filter(Boolean));
+  const removed = previous.filter((outcome) => outcome && !nextSet.has(outcome));
+  const added = next.filter((outcome) => outcome && !previousSet.has(outcome));
+  const renames = new Map<string, string>();
+
+  // A one-for-one replacement is the only unambiguous rename signal exposed
+  // by the list editor. Pure deletions therefore clear references instead of
+  // silently redirecting them to a neighboring outcome.
+  if (removed.length === added.length && removed.length > 0) {
+    for (let index = 0; index < removed.length; index += 1) {
+      renames.set(removed[index]!, added[index]!);
+    }
+  }
+
+  return connections.map((connection) => {
+    if (connection.from !== decisionId || connection.outcome === undefined) return connection;
+    const current = connection.outcome.trim();
+    const canonical = next.find((outcome) => outcome === current);
+    if (canonical !== undefined) return { ...connection, outcome: canonical };
+    const renamed = renames.get(current);
+    if (renamed !== undefined) return { ...connection, outcome: renamed };
+    const { outcome: _outcome, ...withoutOutcome } = connection;
+    return withoutOutcome;
+  });
 }
 
 // Removing a card also removes every connection touching it.
@@ -231,6 +285,7 @@ function isEffectEntry(value: unknown): value is EffectCardEntry {
   const record = value as Record<string, unknown>;
   return (
     typeof record["id"] === "string" &&
+    record["id"].length > 0 &&
     (record["payloadKind"] === "domain-fact" ||
       record["payloadKind"] === "command" ||
       record["payloadKind"] === "data") &&
@@ -248,6 +303,7 @@ function isCard(value: unknown): value is ActivityCard {
   const position = record["position"] as Record<string, unknown> | undefined;
   return (
     typeof record["id"] === "string" &&
+    record["id"].length > 0 &&
     (record["kind"] === "activity" || record["kind"] === "decision") &&
     typeof record["title"] === "string" &&
     typeof record["input"] === "string" &&
@@ -266,7 +322,11 @@ function isCard(value: unknown): value is ActivityCard {
     typeof position === "object" &&
     position !== null &&
     typeof position["x"] === "number" &&
-    typeof position["y"] === "number"
+    Number.isFinite(position["x"]) &&
+    Math.abs(position["x"]) <= 1_000_000 &&
+    typeof position["y"] === "number" &&
+    Number.isFinite(position["y"]) &&
+    Math.abs(position["y"]) <= 1_000_000
   );
 }
 
@@ -275,6 +335,7 @@ function isConnection(value: unknown): value is FlowConnection {
   const record = value as Record<string, unknown>;
   return (
     typeof record["id"] === "string" &&
+    record["id"].length > 0 &&
     typeof record["from"] === "string" &&
     typeof record["to"] === "string" &&
     (record["outcome"] === undefined || typeof record["outcome"] === "string") &&
@@ -288,9 +349,157 @@ function isLaneHint(value: unknown): value is LaneHintCard {
   const record = value as Record<string, unknown>;
   return (
     typeof record["id"] === "string" &&
+    record["id"].length > 0 &&
     typeof record["label"] === "string" &&
     isResponsibilityFields(record["responsibility"])
   );
+}
+
+/**
+ * Checks semantic invariants for persisted or in-memory authoring decks.
+ * Shape parsing and this semantic pass are intentionally separate: an
+ * authoring draft may still have blank model fields, but it must never have
+ * ambiguous ids, dangling references, invalid geometry, or stale decision
+ * branches when it is exported or restored.
+ */
+export function validateCardDeck(deck: CardDeck): readonly CardDeckValidationIssue[] {
+  const issues: CardDeckValidationIssue[] = [];
+  const cardIds = new Set<string>();
+  const connectionIds = new Set<string>();
+  const laneHintIds = new Set<string>();
+  const cardsById = new Map(deck.cards.map((card) => [card.id, card]));
+
+  for (const [index, card] of deck.cards.entries()) {
+    if (cardIds.has(card.id)) {
+      issues.push({
+        path: `$.cards[${index}].id`,
+        message: `card id "${card.id}" が重複しています`,
+      });
+    }
+    cardIds.add(card.id);
+
+    const effectIds = new Set<string>();
+    for (const [effectIndex, effect] of card.effects.entries()) {
+      if (effectIds.has(effect.id)) {
+        issues.push({
+          path: `$.cards[${index}].effects[${effectIndex}].id`,
+          message: `effect id "${effect.id}" が同一カード内で重複しています`,
+        });
+      }
+      effectIds.add(effect.id);
+    }
+
+    const trimmedOutcomes = card.outcomes.map((outcome) => outcome.trim());
+    if (card.kind === "decision") {
+      const outcomeIds = new Set<string>();
+      for (const [outcomeIndex, outcome] of trimmedOutcomes.entries()) {
+        if (outcome.length === 0) {
+          issues.push({
+            path: `$.cards[${index}].outcomes[${outcomeIndex}]`,
+            message: "Decision outcome は空でない文字列である必要があります",
+          });
+        } else if (outcomeIds.has(outcome)) {
+          issues.push({
+            path: `$.cards[${index}].outcomes[${outcomeIndex}]`,
+            message: `Decision outcome "${outcome}" が重複しています`,
+          });
+        }
+        outcomeIds.add(outcome);
+      }
+    } else if (card.outcomes.length > 0) {
+      issues.push({
+        path: `$.cards[${index}].outcomes`,
+        message: "outcomes は Decision card にだけ指定できます",
+      });
+    }
+
+    if (!Number.isFinite(card.position.x) || !Number.isFinite(card.position.y)) {
+      issues.push({
+        path: `$.cards[${index}].position`,
+        message: "position は有限数である必要があります",
+      });
+    } else if (Math.abs(card.position.x) > 1_000_000 || Math.abs(card.position.y) > 1_000_000) {
+      issues.push({
+        path: `$.cards[${index}].position`,
+        message: "position が安全な範囲を超えています",
+      });
+    }
+  }
+
+  const pairIds = new Set<string>();
+  for (const [index, connection] of deck.connections.entries()) {
+    if (connectionIds.has(connection.id)) {
+      issues.push({
+        path: `$.connections[${index}].id`,
+        message: `connection id "${connection.id}" が重複しています`,
+      });
+    }
+    connectionIds.add(connection.id);
+
+    const from = cardsById.get(connection.from);
+    const to = cardsById.get(connection.to);
+    if (!from) {
+      issues.push({
+        path: `$.connections[${index}].from`,
+        message: `未定義のcard "${connection.from}" を参照しています`,
+      });
+    }
+    if (!to) {
+      issues.push({
+        path: `$.connections[${index}].to`,
+        message: `未定義のcard "${connection.to}" を参照しています`,
+      });
+    }
+    if (connection.from === connection.to) {
+      issues.push({
+        path: `$.connections[${index}]`,
+        message: "connection は同じcardをfrom/toにできません",
+      });
+    }
+
+    const pairKey = JSON.stringify([connection.from, connection.to]);
+    if (pairIds.has(pairKey)) {
+      issues.push({
+        path: `$.connections[${index}]`,
+        message: "同じfrom/toのconnectionが重複しています",
+      });
+    }
+    pairIds.add(pairKey);
+
+    const outcome = connection.outcome?.trim();
+    if (connection.outcome !== undefined && !outcome) {
+      issues.push({
+        path: `$.connections[${index}].outcome`,
+        message: "outcome は指定時に空でない文字列である必要があります",
+      });
+    } else if (outcome !== undefined && from?.kind !== "decision") {
+      issues.push({
+        path: `$.connections[${index}].outcome`,
+        message: "outcome はDecision cardから出るconnectionにだけ指定できます",
+      });
+    } else if (
+      outcome !== undefined &&
+      from &&
+      !from.outcomes.some((candidate) => candidate.trim() === outcome)
+    ) {
+      issues.push({
+        path: `$.connections[${index}].outcome`,
+        message: `存在しないDecision outcome "${outcome}" を参照しています`,
+      });
+    }
+  }
+
+  for (const [index, hint] of deck.laneHints.entries()) {
+    if (laneHintIds.has(hint.id)) {
+      issues.push({
+        path: `$.laneHints[${index}].id`,
+        message: `lane hint id "${hint.id}" が重複しています`,
+      });
+    }
+    laneHintIds.add(hint.id);
+  }
+
+  return issues;
 }
 
 /**
@@ -308,11 +517,12 @@ export function parseCardDeck(value: unknown): CardDeck | undefined {
   if (!Array.isArray(cards) || !cards.every(isCard)) return undefined;
   if (!Array.isArray(connections) || !connections.every(isConnection)) return undefined;
   if (!Array.isArray(laneHints) || !laneHints.every(isLaneHint)) return undefined;
-  return {
+  const deck: CardDeck = {
     version: CARD_DECK_VERSION,
     title: record["title"],
     cards,
     connections,
     laneHints,
   };
+  return validateCardDeck(deck).length === 0 ? deck : undefined;
 }

@@ -1,4 +1,6 @@
 import { boundaryOf } from "./boundary.js";
+import { compositeProjectedId, projectedFlowKey } from "./projectedId.js";
+import { leafActivityIds } from "./semantic.js";
 import type {
   Id,
   ProcessModel,
@@ -14,6 +16,7 @@ export function projectByResponsibilityBoundary(model: ProcessModel, view: ViewD
   const orderedActivities = linearOrder(model);
   const projectedActivities: ProjectedActivity[] = [];
   const sourceToProjected = new Map<Id, Id>();
+  const occupiedIds = new Set<Id>(Object.keys(model.activities));
 
   let currentRun: Id[] = [];
   let currentBoundary: string | undefined;
@@ -30,7 +33,7 @@ export function projectByResponsibilityBoundary(model: ProcessModel, view: ViewD
       continue;
     }
 
-    const projected = composeRun(model, currentRun, currentBoundary ?? "<unassigned>");
+    const projected = composeRun(model, currentRun, currentBoundary ?? "<unassigned>", occupiedIds);
     projectedActivities.push(projected);
     for (const sourceId of currentRun) sourceToProjected.set(sourceId, projected.id);
 
@@ -39,7 +42,7 @@ export function projectByResponsibilityBoundary(model: ProcessModel, view: ViewD
   }
 
   if (currentRun.length > 0) {
-    const projected = composeRun(model, currentRun, currentBoundary ?? "<unassigned>");
+    const projected = composeRun(model, currentRun, currentBoundary ?? "<unassigned>", occupiedIds);
     projectedActivities.push(projected);
     for (const sourceId of currentRun) sourceToProjected.set(sourceId, projected.id);
   }
@@ -76,7 +79,12 @@ function assertLaneResponsibilityView(view: ViewDef): void {
   }
 }
 
-function composeRun(model: ProcessModel, activityIds: Id[], boundary: string): ProjectedActivity {
+function composeRun(
+  model: ProcessModel,
+  activityIds: Id[],
+  boundary: string,
+  occupiedIds: Set<Id>,
+): ProjectedActivity {
   const first = model.activities[activityIds[0] ?? ""];
   const last = model.activities[activityIds[activityIds.length - 1] ?? ""];
 
@@ -96,7 +104,7 @@ function composeRun(model: ProcessModel, activityIds: Id[], boundary: string): P
   }
 
   return {
-    id: `composite:${activityIds.join("+")}`,
+    id: compositeProjectedId(activityIds, occupiedIds),
     kind: "composite",
     activityIds,
     boundary,
@@ -118,7 +126,7 @@ function collapseFlows(
 
     if (!from || !to || from === to) continue;
 
-    const key = `${from}->${to}`;
+    const key = projectedFlowKey(from, to);
     if (seen.has(key)) continue;
 
     seen.add(key);
@@ -129,15 +137,9 @@ function collapseFlows(
 }
 
 function linearOrder(model: ProcessModel): Id[] {
-  const flowIds = new Set<Id>();
-  for (const flow of model.flows) {
-    if (model.activities[flow.from] && model.activities[flow.to]) {
-      flowIds.add(flow.from);
-      flowIds.add(flow.to);
-    }
-  }
-
-  const ids = flowIds.size > 0 ? [...flowIds] : Object.keys(model.activities);
+  // Flow endpoints provide ordering information only. The model itself is
+  // the projection scope; otherwise orphan Activities disappear silently.
+  const ids = [...leafActivityIds(model)];
   if (ids.length === 0) return [];
 
   const incoming = new Map<Id, Id[]>();
@@ -152,6 +154,25 @@ function linearOrder(model: ProcessModel): Id[] {
     if (!incoming.has(flow.to) || !outgoing.has(flow.from)) continue;
     outgoing.get(flow.from)!.push(flow.to);
     incoming.get(flow.to)!.push(flow.from);
+  }
+
+  const connected = new Set<Id>();
+  if (ids.length > 0) {
+    const queue = [ids[0]!];
+    connected.add(ids[0]!);
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const next of [...(outgoing.get(current) ?? []), ...(incoming.get(current) ?? [])]) {
+        if (connected.has(next)) continue;
+        connected.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  if (connected.size !== ids.length) {
+    throw new Error(
+      `v0 projection requires exactly one start activity and all activities to belong to one connected linear flow (disconnected: ${ids.filter((id) => !connected.has(id)).join(", ")})`,
+    );
   }
 
   for (const id of ids) {

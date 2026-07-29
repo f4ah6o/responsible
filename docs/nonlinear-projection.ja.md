@@ -42,6 +42,8 @@ Projection されたグラフは quotient グラフである:
 
 これは現在の線形の挙動を保存する: 連続する同一境界の実行は、1 つの合成された projection された Activity になる。
 
+Projecter は flow の endpoint だけからスコープを推測しない。呼び出し元が選択した leaf 集合全体を projection の対象とするため、flow のない単独の Activity は atomic として保持され、orphan や複数の弱連結成分は対象 ID を含む明示的なエラーで拒否される。flow endpoint 外の Activity を黙って欠落させてはならない。親 Activity は従来どおり leaf ではないため除外し、ビューアと CLI は leaf scope を明示的に構築する。
+
 ## 型の合成
 
 Projection されたコンポーネントの入力型と出力型は、グラフの境界エッジから導出される。

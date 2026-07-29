@@ -266,6 +266,11 @@ export function ProcessViewer() {
   const { t, locale, setLocale } = useI18n();
   const [processes, setProcesses] = useState<readonly SampleProcess[]>(initialProcesses);
   const [processId, setProcessId] = useState(initialProcess.id);
+  // Keep an embedded model payload alive for the whole viewing session. URL
+  // sync must not replace it with a localStorage-only process id.
+  const [sharedModelParam, setSharedModelParam] = useState<string | undefined>(
+    initialUrlState.modelParam,
+  );
   const [zoomLevel, setZoomLevel] = useState(() =>
     initialUrlState.zoomLevel === undefined
       ? DEFAULT_ZOOM_LEVEL
@@ -349,15 +354,16 @@ export function ProcessViewer() {
     [projected, model, selectedLeafId, zoomLevel, measuredSizes, effects],
   );
 
-  const scopeKey = validScopePath.join(",");
+  const scopeKey = JSON.stringify(validScopePath);
   useEffect(() => {
     const hash = writeViewerUrlState({
       processId,
       zoomLevel,
-      scopePath: scopeKey.split(","),
+      scopePath: validScopePath,
+      ...(sharedModelParam ? { modelParam: sharedModelParam } : {}),
     });
     history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
-  }, [processId, zoomLevel, scopeKey]);
+  }, [processId, zoomLevel, scopeKey, sharedModelParam]);
 
   useEffect(() => {
     if (!shareStatus) return;
@@ -403,6 +409,7 @@ export function ProcessViewer() {
         setProcesses((prev) =>
           prev.some((existing) => existing.id === process.id) ? prev : [...prev, process],
         );
+        setSharedModelParam(modelParam);
         setProcessId(process.id);
         const scope = initialUrlState.scopePath;
         setScopePath(scope && scope.length > 0 ? scope : [process.rootActivityId]);
@@ -450,6 +457,7 @@ export function ProcessViewer() {
 
   const selectProcess = useCallback(
     (process: SampleProcess) => {
+      setSharedModelParam(undefined);
       setProcessId(process.id);
       setScopePath([process.rootActivityId]);
       setScopeError(undefined);

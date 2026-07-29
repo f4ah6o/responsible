@@ -1,4 +1,6 @@
 import { boundaryOf } from "./boundary.js";
+import { compositeProjectedId, projectedFlowKey } from "./projectedId.js";
+import { leafActivityIds } from "./semantic.js";
 import type {
   Id,
   ProcessModel,
@@ -94,6 +96,7 @@ export function projectDagByResponsibilityBoundary(
     }
   }
 
+  const occupiedProjectedIds = new Set<Id>(order);
   const projectedActivities: ProjectedActivity[] = members.map((componentMembers) => {
     const boundary = boundaryById.get(componentMembers[0]!) ?? "<unassigned>";
     // Entries: reached from outside the component, or scope starts.
@@ -116,7 +119,7 @@ export function projectDagByResponsibilityBoundary(
       return { id, kind: "atomic", activityId: id, boundary, input, output };
     }
     return {
-      id: `composite:${componentMembers.join("+")}`,
+      id: compositeProjectedId(componentMembers, occupiedProjectedIds),
       kind: "composite",
       activityIds: componentMembers,
       boundary,
@@ -137,7 +140,7 @@ export function projectDagByResponsibilityBoundary(
     const from = projectedIdOf(flow.from);
     const to = projectedIdOf(flow.to);
     if (from === to) continue;
-    const key = `${from}->${to}`;
+    const key = projectedFlowKey(from, to);
     if (seen.has(key)) continue;
     seen.add(key);
     flows.push({ from, to });
@@ -171,20 +174,12 @@ function assertLaneResponsibilityView(view: ViewDef): void {
 /**
  * Returns activity ids in a deterministic topological order.
  *
- * Scope derivation matches the linear projector: ids referenced by flows when
- * flows exist, otherwise all activities. Rejects cycles and weakly
- * disconnected graphs with explicit errors.
+ * The model's complete Activity set is the scope. Flow endpoints determine
+ * ordering and connectivity, but never implicitly remove unconnected
+ * Activities. Cycles and weakly disconnected graphs are rejected explicitly.
  */
 function topologicalOrder(model: ProcessModel): Id[] {
-  const flowIds = new Set<Id>();
-  for (const flow of model.flows) {
-    if (model.activities[flow.from] && model.activities[flow.to]) {
-      flowIds.add(flow.from);
-      flowIds.add(flow.to);
-    }
-  }
-
-  const ids = flowIds.size > 0 ? [...flowIds] : Object.keys(model.activities);
+  const ids = [...leafActivityIds(model)];
   if (ids.length === 0) return [];
   const idSet = new Set(ids);
 
@@ -213,7 +208,7 @@ function topologicalOrder(model: ProcessModel): Id[] {
   }
   if (reached.size !== ids.length) {
     throw new Error(
-      "projection requires all activities in the scope to belong to one weakly connected flow",
+      `projection requires all activities in the scope to belong to one weakly connected flow (disconnected: ${ids.filter((id) => !reached.has(id)).join(", ")})`,
     );
   }
 

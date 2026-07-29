@@ -116,6 +116,8 @@ interface BoundaryProjection<In, Out> {
 
 現在の TypeScript コアでは、`projectByResponsibilityBoundary(model, view)` が具体的な v0 の projection 関数である。選択された Activity のスコープと境界表現に対して leaf Activity を projection し、JSON 直列化可能な `ProcessView` を返す。
 
+Boundary の同一性は表示ラベルではない。`boundaryOf` は真偽値・数値・配列・オブジェクト・区切り文字を含む複数軸パスを型付きの正準表現へ変換し、表示側だけがそれを人間向け lane label に decode する。利用側は `BoundaryId` を `:` や `|` で分割して構造を復元してはならない。
+
 ## Responsibility Boundary Normal Form
 
 Responsibility Boundary Normal Form、すなわち RBNF は、主として境界越えの観測的等価性による quotient view である。

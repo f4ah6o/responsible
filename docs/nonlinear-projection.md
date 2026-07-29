@@ -42,6 +42,8 @@ The projected graph is a quotient graph:
 
 This preserves the current linear behavior: a contiguous same-boundary run becomes one composite projected Activity.
 
+The projector never derives the scope only from flow endpoints. The caller's selected leaf set is the complete projection scope, so an Activity outside every flow is retained when it is the only leaf, and an orphan or multiple weakly disconnected components are rejected explicitly with the affected ids rather than silently omitted. Parent Activities are excluded as usual because projection is defined over leaves; callers such as the viewer and CLI construct that leaf scope explicitly.
+
 ## Type composition
 
 Projected component input and output types are derived from graph boundary edges:

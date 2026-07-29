@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 
 import { HIERARCHICAL_BOUNDARY_ORDER } from "./hierarchy.js";
 import { ensureRootActivity, parseProcessModelJson, type ValidationResult } from "./validate.js";
+import { leafActivityIds } from "./semantic.js";
 import { migrateProcessModelToV1 } from "./migrate.js";
 import { projectDagByResponsibilityBoundary } from "./quotient.js";
 
@@ -104,15 +105,25 @@ async function runProject(files: readonly string[], boundary: string | undefined
   }
 
   const { model: rooted } = ensureRootActivity(result.model);
+  const leafIds = leafActivityIds(rooted);
+  const leafSet = new Set(leafIds);
+  const scoped = {
+    schemaVersion: rooted.schemaVersion,
+    activities: Object.fromEntries(leafIds.map((id) => [id, rooted.activities[id]!])),
+    flows: rooted.flows.filter((flow) => leafSet.has(flow.from) && leafSet.has(flow.to)),
+  } as const;
   const migrated = migrateProcessModelToV1(rooted);
 
   try {
-    const view = projectDagByResponsibilityBoundary(migrated, {
-      id: "cli",
-      layout: "lane",
-      normalForm: "responsibilityBoundary",
-      boundary,
-    });
+    const view = projectDagByResponsibilityBoundary(
+      { ...migrated, activities: scoped.activities, flows: scoped.flows },
+      {
+        id: "cli",
+        layout: "lane",
+        normalForm: "responsibilityBoundary",
+        boundary,
+      },
+    );
     process.stdout.write(`${JSON.stringify(view, null, 2)}\n`);
     return 0;
   } catch (error) {

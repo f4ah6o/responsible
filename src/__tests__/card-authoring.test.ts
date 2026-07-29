@@ -18,6 +18,7 @@ import {
   emptyDeck,
   parseCardDeck,
   removeCard,
+  validateCardDeck,
   updateCard,
   updateConnection,
 } from "../viewer/authoring/cardDeck.js";
@@ -190,6 +191,91 @@ test("parseCardDeck round-trips a deck through JSON and rejects other shapes", (
   assert.equal(parseCardDeck(undefined), undefined);
   assert.equal(parseCardDeck({ version: "other" }), undefined);
   assert.equal(parseCardDeck({ version: "responsible.card-deck.v1", title: "x" }), undefined);
+});
+
+test("parseCardDeck rejects duplicate ids, dangling/self connections, and invalid positions", () => {
+  const deck = sampleDeck();
+  const duplicateCard = { ...deck.cards[0]!, id: deck.cards[1]!.id };
+  assert.equal(parseCardDeck({ ...deck, cards: [deck.cards[0]!, duplicateCard] }), undefined);
+
+  const dangling = {
+    ...deck,
+    connections: [{ id: "flow-x", from: "missing", to: deck.cards[0]!.id }],
+  };
+  assert.equal(parseCardDeck(dangling), undefined);
+
+  const self = {
+    ...deck,
+    connections: [{ id: "flow-x", from: deck.cards[0]!.id, to: deck.cards[0]!.id }],
+  };
+  assert.equal(parseCardDeck(self), undefined);
+
+  const nonFinite = {
+    ...deck,
+    cards: [{ ...deck.cards[0]!, position: { x: Number.NaN, y: 0 } }],
+  };
+  assert.equal(parseCardDeck(nonFinite), undefined);
+});
+
+test("CardDeck validation rejects duplicate effects, lane hints, edges, and stale outcomes", () => {
+  let deck = emptyDeck();
+  const decision = createCard(deck, "decision", { x: 0, y: 0 });
+  deck = addCard(deck, decision);
+  const target = createCard(deck, "activity", { x: 10, y: 10 });
+  deck = addCard(deck, target);
+  deck = connect(deck, decision.id, target.id);
+  deck = updateConnection(deck, "flow-1", { outcome: "missing" });
+  deck = {
+    ...deck,
+    cards: [
+      {
+        ...deck.cards[0]!,
+        effects: [createEffectEntry(deck.cards[0]!), createEffectEntry(deck.cards[0]!)],
+      },
+    ],
+    laneHints: [
+      { id: "lane-1", label: "one", responsibility: {} },
+      { id: "lane-1", label: "two", responsibility: {} },
+    ],
+  };
+  const issues = validateCardDeck(deck);
+  assert.equal(
+    issues.some((issue) => issue.path.includes("effects")),
+    true,
+  );
+  assert.equal(
+    issues.some((issue) => issue.path.includes("laneHints")),
+    true,
+  );
+  assert.equal(
+    issues.some((issue) => issue.path.includes("outcome")),
+    true,
+  );
+});
+
+test("Decision outcome changes synchronize connections and preserve explicit mappings", () => {
+  let deck = emptyDeck();
+  deck = addCard(deck, createCard(deck, "decision", { x: 0, y: 0 }));
+  deck = addCard(deck, createCard(deck, "activity", { x: 10, y: 10 }));
+  deck = connect(deck, "decision-1", "activity-1");
+  deck = updateConnection(deck, "flow-1", { outcome: "approved" });
+  deck = updateCard(deck, "decision-1", { outcomes: ["accepted", "rejected"] });
+  assert.equal(deck.connections[0]?.outcome, "accepted");
+
+  deck = updateConnection(deck, "flow-1", { mapping: "explicit condition" });
+  deck = updateCard(deck, "decision-1", { outcomes: ["rejected"] });
+  assert.equal(deck.connections[0]?.outcome, undefined);
+  assert.equal(deck.connections[0]?.mapping, "explicit condition");
+  assert.equal(validateCardDeck(deck).length, 0);
+});
+
+test("deckToProcessModel does not silently overwrite duplicate card ids", () => {
+  const deck = sampleDeck();
+  const duplicate = {
+    ...deck,
+    cards: [deck.cards[0]!, { ...deck.cards[1]!, id: deck.cards[0]!.id }],
+  };
+  assert.throws(() => deckToProcessModel(duplicate), /duplicate card id/);
 });
 
 // Issue #42 acceptance: the bundled application_approval sample is

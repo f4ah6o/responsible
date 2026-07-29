@@ -48,6 +48,16 @@ export function validateProcessModel(value: unknown): ValidationResult {
     return invalid([{ path: "$", message: "ProcessModel はオブジェクトである必要があります" }]);
   }
 
+  validateUnknownKeys(
+    value,
+    ["$schema", "schemaVersion", "activities", "types", "flows", "views"],
+    "$",
+    issues,
+  );
+  if (value["$schema"] !== undefined && typeof value["$schema"] !== "string") {
+    issues.push({ path: "$.$schema", message: "$schema は文字列である必要があります" });
+  }
+
   if (!SCHEMA_VERSIONS.includes(value["schemaVersion"] as SchemaVersion)) {
     issues.push({
       path: "$.schemaVersion",
@@ -107,6 +117,9 @@ export function validateProcessModel(value: unknown): ValidationResult {
       validateFlowDef(index, flow, activityIds, issues);
     }
   }
+
+  const types = value["types"];
+  if (types !== undefined) validateTypes(types, issues);
 
   const views = value["views"];
   if (views !== undefined) {
@@ -217,7 +230,23 @@ function validateActivityDef(id: Id, def: unknown, isV1: boolean, issues: Valida
     return;
   }
 
-  if (def["id"] !== id) {
+  validateUnknownKeys(
+    def,
+    [
+      "id",
+      "name",
+      "input",
+      "output",
+      "responsibility",
+      "children",
+      "status",
+      ...V1_ACTIVITY_FIELDS,
+    ],
+    path,
+    issues,
+  );
+
+  if (typeof def["id"] !== "string" || def["id"].length === 0 || def["id"] !== id) {
     issues.push({
       path: `${path}.id`,
       message: `id はキー "${id}" と一致する必要があります（受け取った値: ${JSON.stringify(def["id"])}）`,
@@ -255,7 +284,7 @@ function validateActivityDef(id: Id, def: unknown, isV1: boolean, issues: Valida
       });
     } else {
       for (const [index, childId] of children.entries()) {
-        if (typeof childId !== "string") {
+        if (typeof childId !== "string" || childId.length === 0) {
           issues.push({
             path: `${path}.children[${index}]`,
             message: "children の要素は Activity ID（文字列）である必要があります",
@@ -324,6 +353,8 @@ function validateEffectDefs(path: string, value: unknown, issues: ValidationIssu
       continue;
     }
 
+    validateUnknownKeys(effect, ["id", "payload", "delivery"], effectPath, issues);
+
     if (
       effect["id"] !== undefined &&
       (typeof effect["id"] !== "string" || effect["id"].length === 0)
@@ -341,6 +372,7 @@ function validateEffectDefs(path: string, value: unknown, issues: ValidationIssu
         message: "payload はオブジェクトである必要があります",
       });
     } else {
+      validateUnknownKeys(payload, ["kind", "schema"], `${effectPath}.payload`, issues);
       if (!EFFECT_PAYLOAD_KINDS.includes(payload["kind"] as EffectPayloadKind)) {
         issues.push({
           path: `${effectPath}.payload.kind`,
@@ -363,6 +395,7 @@ function validateEffectDefs(path: string, value: unknown, issues: ValidationIssu
       });
       continue;
     }
+    validateUnknownKeys(delivery, ["mode", "target"], `${effectPath}.delivery`, issues);
     const mode = delivery["mode"];
     if (!EFFECT_DELIVERY_MODES.includes(mode as (typeof EFFECT_DELIVERY_MODES)[number])) {
       issues.push({
@@ -397,6 +430,12 @@ function validateFlowDef(
     return;
   }
 
+  validateUnknownKeys(flow, ["id", "from", "to", "mapping", "contract"], path, issues);
+
+  if (flow["id"] !== undefined && (typeof flow["id"] !== "string" || flow["id"].length === 0)) {
+    issues.push({ path: `${path}.id`, message: "id は指定時に空でない文字列である必要があります" });
+  }
+
   for (const field of ["from", "to"] as const) {
     const fieldValue = flow[field];
     if (typeof fieldValue !== "string" || fieldValue.length === 0) {
@@ -411,6 +450,15 @@ function validateFlowDef(
       });
     }
   }
+
+  for (const field of ["mapping", "contract"] as const) {
+    if (flow[field] !== undefined && typeof flow[field] !== "string") {
+      issues.push({
+        path: `${path}.${field}`,
+        message: `${field} は指定時に文字列である必要があります`,
+      });
+    }
+  }
 }
 
 function validateViewDef(index: number, view: unknown, issues: ValidationIssue[]): void {
@@ -420,6 +468,8 @@ function validateViewDef(index: number, view: unknown, issues: ValidationIssue[]
     issues.push({ path, message: "view はオブジェクトである必要があります" });
     return;
   }
+
+  validateUnknownKeys(view, ["id", "layout", "boundary", "normalForm"], path, issues);
 
   if (typeof view["id"] !== "string" || view["id"].length === 0) {
     issues.push({ path: `${path}.id`, message: "id は空でない文字列である必要があります" });
@@ -436,11 +486,124 @@ function validateViewDef(index: number, view: unknown, issues: ValidationIssue[]
 
   const boundary = view["boundary"];
   const isKey = (v: unknown): boolean => typeof v === "string" && v.length > 0;
-  if (!isKey(boundary) && !(Array.isArray(boundary) && boundary.every(isKey))) {
+  if (
+    !isKey(boundary) &&
+    !(Array.isArray(boundary) && boundary.length > 0 && boundary.every(isKey))
+  ) {
     issues.push({
       path: `${path}.boundary`,
       message: "boundary は境界キー（文字列）またはその配列である必要があります",
     });
+  }
+}
+
+function validateTypes(value: unknown, issues: ValidationIssue[]): void {
+  if (!isRecord(value)) {
+    issues.push({
+      path: "$.types",
+      message: "types は Type ID をキーとするオブジェクトである必要があります",
+    });
+    return;
+  }
+
+  for (const [id, def] of Object.entries(value)) {
+    validateTypeDef(`$.types.${id}`, def, issues);
+  }
+}
+
+function validateTypeDef(path: string, value: unknown, issues: ValidationIssue[]): void {
+  if (!isRecord(value)) {
+    issues.push({ path, message: "TypeDef はオブジェクトである必要があります" });
+    return;
+  }
+
+  const kind = value["kind"];
+  if (kind === "primitive") {
+    validateUnknownKeys(value, ["kind", "name"], path, issues);
+    if (value["name"] !== undefined && typeof value["name"] !== "string") {
+      issues.push({ path: `${path}.name`, message: "name は指定時に文字列である必要があります" });
+    }
+    return;
+  }
+
+  if (kind === "record") {
+    validateUnknownKeys(value, ["kind", "fields"], path, issues);
+    const fields = value["fields"];
+    if (!isRecord(fields)) {
+      issues.push({
+        path: `${path}.fields`,
+        message: "fields は FieldDef を値とするオブジェクトである必要があります",
+      });
+      return;
+    }
+    for (const [fieldId, field] of Object.entries(fields)) {
+      validateFieldDef(`${path}.fields.${fieldId}`, field, issues);
+    }
+    return;
+  }
+
+  if (kind === "union") {
+    validateUnknownKeys(value, ["kind", "variants"], path, issues);
+    validateTypeRefRecord(`${path}.variants`, value["variants"], issues);
+    return;
+  }
+
+  if (kind === "result") {
+    validateUnknownKeys(value, ["kind", "ok", "error"], path, issues);
+    validateTypeRef(`${path}.ok`, value["ok"], issues);
+    validateTypeRef(`${path}.error`, value["error"], issues);
+    return;
+  }
+
+  issues.push({
+    path: `${path}.kind`,
+    message: 'kind は "primitive" / "record" / "union" / "result" のいずれかである必要があります',
+  });
+}
+
+function validateFieldDef(path: string, value: unknown, issues: ValidationIssue[]): void {
+  if (!isRecord(value)) {
+    issues.push({ path, message: "FieldDef はオブジェクトである必要があります" });
+    return;
+  }
+  validateUnknownKeys(value, ["type", "required"], path, issues);
+  validateTypeRef(`${path}.type`, value["type"], issues);
+  if (value["required"] !== undefined && typeof value["required"] !== "boolean") {
+    issues.push({
+      path: `${path}.required`,
+      message: "required は指定時に真偽値である必要があります",
+    });
+  }
+}
+
+function validateTypeRefRecord(path: string, value: unknown, issues: ValidationIssue[]): void {
+  if (!isRecord(value)) {
+    issues.push({ path, message: "TypeRef を値とするオブジェクトである必要があります" });
+    return;
+  }
+  for (const [id, ref] of Object.entries(value)) validateTypeRef(`${path}.${id}`, ref, issues);
+}
+
+function validateTypeRef(path: string, value: unknown, issues: ValidationIssue[]): void {
+  if (typeof value !== "string" || value.length === 0) {
+    issues.push({ path, message: "TypeRef は空でない文字列である必要があります" });
+  }
+}
+
+function validateUnknownKeys(
+  value: Readonly<Record<string, unknown>>,
+  allowed: readonly string[],
+  path: string,
+  issues: ValidationIssue[],
+): void {
+  const allowedSet = new Set(allowed);
+  for (const key of Object.keys(value)) {
+    if (!allowedSet.has(key)) {
+      issues.push({
+        path: `${path}.${key}`,
+        message: `未知のフィールド "${key}" は許可されていません`,
+      });
+    }
   }
 }
 
@@ -493,8 +656,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isBoundaryValue(value: unknown): value is BoundaryValue {
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-    return true;
+  if (typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
   if (Array.isArray(value)) return value.every(isBoundaryValue);
   if (isRecord(value)) return Object.values(value).every(isBoundaryValue);
   return false;

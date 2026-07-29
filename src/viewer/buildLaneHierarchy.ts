@@ -1,4 +1,11 @@
 import { HIERARCHICAL_BOUNDARY_ORDER } from "../index.js";
+import {
+  boundaryIdForPath,
+  decodeBoundaryId,
+  displayBoundaryValue,
+  formatBoundaryValue,
+  type DecodedBoundaryPart,
+} from "../boundary.js";
 import type { ActivityDef, Id, ProcessView, ProjectedActivity } from "../model.js";
 
 export type HierarchicalLane = {
@@ -14,6 +21,7 @@ export type LaneHierarchy = {
   roots: HierarchicalLane[];
   activityParentId: Map<Id, string>;
   activityFlowIndex: Map<Id, number>;
+  laneIdByBoundary: Map<string, string>;
 };
 
 /**
@@ -21,11 +29,27 @@ export type LaneHierarchy = {
  * into an array of values ["X", "Y", "Z"].
  * For a single-key boundary like "team_name", returns ["team_name"].
  */
-function parseBoundaryPath(boundaryStr: string): string[] {
-  if (!boundaryStr.includes("|")) return [boundaryStr];
-  return boundaryStr.split("|").map((part) => {
-    const idx = part.indexOf(":");
-    return idx >= 0 ? part.slice(idx + 1) : part;
+function boundaryParts(
+  boundaryStr: string,
+  pathKeys: readonly string[],
+): readonly DecodedBoundaryPart[] {
+  // A one-axis expression has no composite separator to parse. This branch
+  // keeps literal values such as "A|B" and "D:C" intact.
+  if (pathKeys.length === 1 && !boundaryStr.startsWith("\u0001")) {
+    return pathKeys[0] === undefined
+      ? [{ value: boundaryStr }]
+      : [{ key: pathKeys[0], value: boundaryStr }];
+  }
+  const decoded = decodeBoundaryId(boundaryStr);
+  const first = decoded[0];
+  if (decoded.length === 1 && first !== undefined && first.key === undefined) {
+    return pathKeys[0] === undefined
+      ? [{ value: first.value }]
+      : [{ key: pathKeys[0], value: first.value }];
+  }
+  return decoded.map((part, index) => {
+    const key = part.key ?? pathKeys[index];
+    return key === undefined ? { value: part.value } : { key, value: part.value };
   });
 }
 
@@ -35,8 +59,29 @@ function parseBoundaryPath(boundaryStr: string): string[] {
  * of their resolved target boundary.
  */
 export function laneIdForBoundary(boundaryStr: string, pathKeys: readonly string[]): string {
-  const segments = parseBoundaryPath(boundaryStr);
-  return `lane:${pathKeys.map((key, index) => `${key}:${segments[index]}`).join("/")}`;
+  const parts = boundaryParts(boundaryStr, pathKeys);
+  const values = parts.slice(0, pathKeys.length);
+  const hasUnsafeLegacyValue = values.some(
+    ({ key, value }) =>
+      !key ||
+      key.includes(":") ||
+      key.includes("|") ||
+      key.includes("/") ||
+      typeof value !== "string" ||
+      value.includes(":") ||
+      value.includes("|") ||
+      value.includes("/"),
+  );
+  if (!hasUnsafeLegacyValue) {
+    return `lane:${values.map(({ key, value }) => `${key}:${value}`).join("/")}`;
+  }
+  return `lane:v2:${encodeURIComponent(boundaryIdForPath(values))}`;
+}
+
+/** Canonical identity used to look up the actual lane node for an axis path. */
+export function laneBoundaryIdentity(boundaryStr: string, pathKeys: readonly string[]): string {
+  const parts = boundaryParts(boundaryStr, pathKeys).slice(0, pathKeys.length);
+  return parts.length === 1 ? formatBoundaryValue(parts[0]?.value) : boundaryIdForPath(parts);
 }
 
 export function buildLaneHierarchy(
@@ -50,11 +95,15 @@ export function buildLaneHierarchy(
   const laneById = new Map<string, HierarchicalLane>();
   const activityParentId = new Map<Id, string>();
   const activityFlowIndex = new Map<Id, number>();
+  const activityIds = new Set(view.activities.map((activity) => activity.id));
+  const occupiedNodeIds = new Set(activityIds);
+  const laneIdByBoundary = new Map<string, string>();
 
   for (const [flowIndex, activity] of view.activities.entries()) {
     activityFlowIndex.set(activity.id, flowIndex);
 
-    const pathValues = parseBoundaryPath(activity.boundary);
+    const parts = boundaryParts(activity.boundary, pathKeys);
+    const pathValues = parts.map(({ value }) => displayBoundaryValue(value));
 
     let currentChildren = roots;
 
@@ -62,11 +111,26 @@ export function buildLaneHierarchy(
       const key = pathKeys[depth]!;
       const value = pathValues[depth] ?? "<unassigned>";
 
-      const segments = pathValues.slice(0, depth + 1);
-      const laneId = `lane:${pathKeys
-        .slice(0, depth + 1)
-        .map((k, i) => `${k}:${segments[i]}`)
-        .join("/")}`;
+      const laneParts = parts.slice(0, depth + 1);
+      const boundaryId =
+        laneParts.length === 1
+          ? formatBoundaryValue(laneParts[0]?.value)
+          : boundaryIdForPath(laneParts);
+      let laneId = laneIdByBoundary.get(boundaryId);
+      if (laneId === undefined) {
+        laneId = laneIdForBoundary(boundaryId, pathKeys.slice(0, depth + 1));
+        if (occupiedNodeIds.has(laneId)) {
+          const encoded = `lane:v2:${encodeURIComponent(boundaryIdForPath(laneParts))}`;
+          laneId = encoded;
+          let suffix = 1;
+          while (occupiedNodeIds.has(laneId)) {
+            laneId = `${encoded}~${suffix}`;
+            suffix += 1;
+          }
+        }
+        occupiedNodeIds.add(laneId);
+        laneIdByBoundary.set(boundaryId, laneId);
+      }
 
       let lane = laneById.get(laneId);
       if (!lane) {
@@ -91,5 +155,5 @@ export function buildLaneHierarchy(
     }
   }
 
-  return { roots, activityParentId, activityFlowIndex };
+  return { roots, activityParentId, activityFlowIndex, laneIdByBoundary };
 }
