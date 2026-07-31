@@ -96,7 +96,10 @@ Example:
 - a header whose `schemaVersion` is not `responsible.oplog.v0`;
 - a `focus` entry without a non-empty resolved person;
 - an empty `focus.app.exe` or `focus.window.title`;
-- invalid timestamps.
+- invalid timestamps;
+- a document with no `focus` entry, including an empty, header-only, or idle-only log.
+
+A document-level missing-focus issue is reported at line 1 so the issue shape remains consistent even for an empty input.
 
 Timestamp validation must not rely on `Date.parse` alone. A timestamp is accepted only when it:
 
@@ -119,10 +122,11 @@ The function is pure and deterministic.
 For each `focus` entry:
 
 - resolve `person` from the entry or header;
-- normalize `app.exe` for comparison consistently, using case-insensitive comparison on Windows-origin logs;
+- trim `app.exe` and canonicalize it for Windows-style case-insensitive identity, producing `normalizedExe`;
+- retain `app.name` only as optional display metadata;
 - apply `options.titleRules` in order to `window.title` to obtain `normalizedTitle`.
 
-The default title rule list is empty.
+The default title rule list is empty. `normalizedExe`, not the optional display name, is the stable tool identity throughout one log.
 
 ### 2. Stable ordering
 
@@ -133,7 +137,7 @@ Stable-sort timestamped entries by their validated instant. Preserve original li
 The segment key is:
 
 ```text
-(resolved person, normalized app.exe, normalized title)
+(resolved person, normalizedExe, normalized title)
 ```
 
 A `focus` entry joins the current segment only when its key equals the previous focus key. A new segment is always started when:
@@ -152,10 +156,10 @@ Create one Activity for each segment, in segment order:
 - `id`: `op-001`, `op-002`, ...;
 - `name`: normalized title, falling back to `app.name ?? app.exe` when normalization produces an empty string;
 - `input` and `output`: `"Unknown"`;
-- `responsibility`: `{ ...options.responsibility, person, tool }`, where `tool = app.name ?? app.exe`;
+- `responsibility`: `{ ...options.responsibility, person, tool }`, where `tool = normalizedExe`;
 - `status`: `"discovered"`.
 
-The model includes `Unknown: { kind: "primitive" }` in `types`.
+The model includes `Unknown: { kind: "primitive" }` in `types`. `app.name` may be retained outside the responsibility boundary as display metadata in a future schema, but its presence or absence must not change `tool` identity.
 
 ### 5. Flow synthesis
 
@@ -171,6 +175,7 @@ Tests must distinguish source-model preservation from boundary projection:
 
 - the source model preserves every discovered segment and adjacent flow;
 - `tool` projection follows the existing quotient rule and may merge adjacent same-tool segments;
+- segments from the same executable resolve to the same `tool` boundary even when `app.name` is present on only some entries;
 - non-adjacent repeated tools remain distinct in the projected path;
 - `person` projection may merge a longer adjacent run;
 - an operator change prevents person-level folding across the handoff.
@@ -199,21 +204,22 @@ Timestamps use an RFC 3339 value with an explicit offset. The recorder writes on
 
 ## Staged implementation
 
-| Stage | Scope | Issue |
-| --- | --- | --- |
-| 1 | Add `tool` hierarchy/viewer support and projection tests | `issues/open/20260707-add-tool-boundary-level.md` |
-| 2 | Implement oplog parsing, discovery conversion, CLI, examples, and tests | `issues/open/20260707-define-oplog-and-discovery.md` |
-| 3 | Add the consent-based Windows recorder and format checks | `issues/open/20260707-add-windows-operation-recorder.md` |
+| Stage | Scope                                                                         | Issue                                                    |
+| ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 1     | Add `tool` hierarchy/viewer support and projection tests                      | `issues/open/20260707-add-tool-boundary-level.md`        |
+| 2     | Implement oplog parsing, discovery conversion, CLI, examples, and tests       | `issues/open/20260707-define-oplog-and-discovery.md`     |
+| 3     | Add the consent-based Windows recorder and format checks                      | `issues/open/20260707-add-windows-operation-recorder.md` |
 
 ## Assertable subset
 
 After Stage 2, automated tests must cover:
 
 - explicit RFC 3339-with-offset validation, including rejection of date-only, offset-less, locale, and impossible values;
-- line-numbered parser issues;
+- line-numbered parser issues and rejection of logs without a `focus` entry;
 - segmentation by resolved person, app, title, gap, and idle;
 - cycle-free occurrence synthesis for back-and-forth traces;
 - source-model occurrence preservation;
+- stable `tool` identity derived from normalized executable names;
 - quotient behavior at `tool` and `person` boundaries;
 - operator handoff preservation;
 - valid `status`, `responsibility`, and `Unknown` type output.
