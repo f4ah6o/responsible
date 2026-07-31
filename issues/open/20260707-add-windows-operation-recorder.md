@@ -3,7 +3,7 @@
 Status: open
 Model: Claude
 Created: 2026-07-07
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 ## 概要
 
@@ -51,13 +51,31 @@ Updated: 2026-07-31
 
 `t` と `header.startedAt` は `YYYY-MM-DDTHH:mm:ss[.fraction](Z|±HH:mm)` の明示オフセット付き形式で出力する。Stage 2 の厳格な RFC 3339 検証を通ることを形式テストで確認する。
 
+## `resume` 後の `focus` 再出力
+
+通常時は `(exe, マスク済み title)` が直前に出力した `focus` と同じ場合、その `focus` を重複抑制する。
+
+ただし `idle` から入力が再開した場合は、`resume` を1回書いた直後に重複抑制状態をリセットしなければならない。次の正常なフォアグラウンドウィンドウ取得では、アイドル前と同じ `(exe, title)` であっても現在の `focus` を必ず1回書く。
+
+したがって、同じウィンドウを使い続けるケースでも出力は次の順序になる。
+
+```jsonl
+{"kind":"focus","t":"...","app":{"exe":"EXCEL.EXE"},"window":{"title":"quote.xlsx - Excel"}}
+{"kind":"idle","t":"..."}
+{"kind":"resume","t":"..."}
+{"kind":"focus","t":"...","app":{"exe":"EXCEL.EXE"},"window":{"title":"quote.xlsx - Excel"}}
+```
+
+`resume` 後の再出力が完了した後は、その新しい `focus` を基準として通常の重複抑制へ戻る。これにより Stage 2 は `idle` の前後を別セグメントとして発見でき、再開後の作業区間を欠落させない。
+
 ## 動作
 
 1. 起動時に `header` を1行書く。
-2. `(exe, マスク済み title)` が変化したときだけ `focus` を書く。
-3. アイドル開始時に `idle`、入力再開時に `resume` をそれぞれ1回書く。
-4. Ctrl+C で終了する。
-5. 出力はローカルファイルだけとし、ネットワーク通信を行わない。
+2. 通常時は `(exe, マスク済み title)` が変化したときだけ `focus` を書く。
+3. アイドル開始時に `idle` を1回書く。
+4. 入力再開時に `resume` を1回書き、直前focusキーを破棄する。次の正常なポーリングでは現在の `focus` を、アイドル前と同一でも必ず書く。
+5. Ctrl+C で終了する。
+6. 出力はローカルファイルだけとし、ネットワーク通信を行わない。
 
 ## プライバシー要件
 
@@ -71,6 +89,9 @@ Updated: 2026-07-31
 
 - [ ] Windows PowerShell 5.1 または pwsh 7 で動作する。
 - [ ] `header`、`focus`、`idle`、`resume` が仕様どおり出力される。
+- [ ] 通常時は同一 `(exe, title)` の連続 `focus` が重複抑制される。
+- [ ] `resume` 後は重複抑制状態がリセットされ、アイドル前と同じウィンドウでも次の正常なポーリングで `focus` が1回出力される。
+- [ ] 同一ウィンドウの `focus → idle → resume → focus` を Stage 2 で変換すると、アイドル前後が別セグメントになる。
 - [ ] タイトル取得失敗時も `window.title` が空にならない。
 - [ ] `app.name` があればそれを、なければ `app.exe` をタイトルのフォールバックに使う。
 - [ ] マスキング後の生タイトルがファイルへ残らない。
@@ -86,8 +107,12 @@ Updated: 2026-07-31
 
 - JSONL 1行として再パースできる。
 - タイトルマスキング。
-- 同一 focus の重複抑制。
+- 通常時の同一 focus の重複抑制。
 - タイトル変更の検出。
+- `idle` 中は `focus` を出力しない。
+- `resume` が重複抑制状態をリセットする。
+- `focus(A) → idle → resume → focus(A)` と、同じ `(exe, title)` の `focus` が再出力される。
+- `resume` 後の再出力以降は、同じ focus が再び重複抑制される。
 - タイトル取得失敗時の `app.name` フォールバック。
 - `app.name` もない場合の `app.exe` フォールバック。
 - 空タイトルが一切生成されない。
