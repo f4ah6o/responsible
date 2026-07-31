@@ -14,7 +14,7 @@ English | [日本語](README.ja.md)
 
 ---
 
-## Why
+## Why Responsible
 
 BPMN-style diagrams entangle three things: what the work _is_, who is _responsible_ for it, and how it is _drawn_. `responsible` separates them:
 
