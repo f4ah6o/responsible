@@ -200,11 +200,11 @@ Windows 記録スクリプトは、パーサが受理できるログだけを出
 
 ## 段階的実装
 
-| Stage | スコープ                                             | Issue                                                    |
-| ----- | ---------------------------------------------------- | -------------------------------------------------------- |
-| 1     | `tool` 階層・viewer 対応と射影テスト                 | `issues/open/20260707-add-tool-boundary-level.md`        |
-| 2     | oplog パース、発見変換、CLI、例、テスト              | `issues/open/20260707-define-oplog-and-discovery.md`     |
-| 3     | 本人同意型 Windows 記録スクリプトと形式検証          | `issues/open/20260707-add-windows-operation-recorder.md` |
+| Stage | スコープ                                    | Issue                                                    |
+| ----- | ------------------------------------------- | -------------------------------------------------------- |
+| 1     | `tool` 階層・viewer 対応と射影テスト        | `issues/open/20260707-add-tool-boundary-level.md`        |
+| 2     | oplog パース、発見変換、CLI、例、テスト     | `issues/open/20260707-define-oplog-and-discovery.md`     |
+| 3     | 本人同意型 Windows 記録スクリプトと形式検証 | `issues/open/20260707-add-windows-operation-recorder.md` |
 
 ## 表明可能な部分集合
 
