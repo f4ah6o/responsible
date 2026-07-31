@@ -93,6 +93,9 @@ type OpLogNote = { kind: "note"; t: string; text: string };
 - 解決後の担当者が空の `focus`。
 - 空の `focus.app.exe` または `focus.window.title`。
 - 不正な時刻。
+- `focus` が1件もない文書。空、ヘッダのみ、idle のみのログを含む。
+
+文書全体に関する `focus` 欠落は、空入力でも issue の形を統一できるよう1行目の問題として報告する。
 
 時刻検証を `Date.parse` だけに依存させてはならない。次をすべて満たす場合のみ受理する。
 
@@ -115,10 +118,11 @@ discoverProcessModel(entries, options) -> ProcessModel
 各 `focus` について次を行う。
 
 - エントリまたはヘッダから `person` を解決する。
-- `app.exe` を一貫した方法で比較用に正規化する。Windows 由来ログでは大文字小文字を区別しない。
+- `app.exe` を trim し、Windows の大文字小文字を区別しない同一性に合わせて正規化し、`normalizedExe` を得る。
+- `app.name` は任意の表示用メタデータとしてのみ保持する。
 - `options.titleRules` を順番に適用して `normalizedTitle` を得る。
 
-既定のタイトル規則は空配列である。
+既定のタイトル規則は空配列である。1つのログ内で安定したツール同一性には、任意の表示名ではなく `normalizedExe` を使う。
 
 ### 2. 安定ソート
 
@@ -129,7 +133,7 @@ discoverProcessModel(entries, options) -> ProcessModel
 セグメントキーは次とする。
 
 ```text
-(解決後の person, 正規化 app.exe, 正規化 title)
+(解決後の person, normalizedExe, 正規化 title)
 ```
 
 直前の `focus` とキーが等しい場合だけ現在のセグメントへ結合する。次の場合は必ず新しいセグメントを開始する。
@@ -148,10 +152,10 @@ discoverProcessModel(entries, options) -> ProcessModel
 - `id`: `op-001`, `op-002`, ...。
 - `name`: 正規化タイトル。空になった場合は `app.name ?? app.exe`。
 - `input` / `output`: `"Unknown"`。
-- `responsibility`: `{ ...options.responsibility, person, tool }`。`tool = app.name ?? app.exe`。
+- `responsibility`: `{ ...options.responsibility, person, tool }`。`tool = normalizedExe`。
 - `status`: `"discovered"`。
 
-`types` に `Unknown: { kind: "primitive" }` を含める。
+`types` に `Unknown: { kind: "primitive" }` を含める。将来のスキーマで `app.name` を責任境界の外側に表示用メタデータとして保持してもよいが、その有無で `tool` の同一性を変えてはならない。
 
 ### 5. Flow 合成
 
@@ -167,6 +171,7 @@ discoverProcessModel(entries, options) -> ProcessModel
 
 - 元モデルは、すべての発見セグメントと隣接 flow を保持する。
 - `tool` 射影は既存の quotient 規則に従い、同じツールの隣接セグメントを畳み込み得る。
+- 同じ実行ファイルのセグメントは、一部のエントリだけに `app.name` がある場合も同じ `tool` 境界へ解決される。
 - 同じツールでも非隣接の再訪は別ノードとして残る。
 - `person` 射影では、より長い連続区間が畳み込まれ得る。
 - 担当者変更をまたいで person レベルの畳み込みをしてはならない。
@@ -195,21 +200,22 @@ Windows 記録スクリプトは、パーサが受理できるログだけを出
 
 ## 段階的実装
 
-| Stage | スコープ | Issue |
-| --- | --- | --- |
-| 1 | `tool` 階層・viewer 対応と射影テスト | `issues/open/20260707-add-tool-boundary-level.md` |
-| 2 | oplog パース、発見変換、CLI、例、テスト | `issues/open/20260707-define-oplog-and-discovery.md` |
-| 3 | 本人同意型 Windows 記録スクリプトと形式検証 | `issues/open/20260707-add-windows-operation-recorder.md` |
+| Stage | スコープ                                             | Issue                                                    |
+| ----- | ---------------------------------------------------- | -------------------------------------------------------- |
+| 1     | `tool` 階層・viewer 対応と射影テスト                 | `issues/open/20260707-add-tool-boundary-level.md`        |
+| 2     | oplog パース、発見変換、CLI、例、テスト              | `issues/open/20260707-define-oplog-and-discovery.md`     |
+| 3     | 本人同意型 Windows 記録スクリプトと形式検証          | `issues/open/20260707-add-windows-operation-recorder.md` |
 
 ## 表明可能な部分集合
 
 Stage 2 完了後、次を自動テストする。
 
 - オフセット付き RFC 3339 の明示検証。日付のみ、オフセットなし、ロケール形式、存在しない日付を拒否する。
-- 行番号付きのパーサ問題報告。
+- 行番号付きのパーサ問題報告と、`focus` がないログの拒否。
 - 担当者、アプリ、タイトル、gap、idle によるセグメント分割。
 - 往復トレースのサイクルなし合成。
 - 元モデルでの出現保持。
+- 正規化済み実行ファイル名に基づく安定した `tool` 同一性。
 - `tool` / `person` 境界での quotient 挙動。
 - 担当者引き継ぎの保持。
 - `status`、`responsibility`、`Unknown` 型の妥当性。
