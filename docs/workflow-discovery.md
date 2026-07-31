@@ -204,11 +204,11 @@ Timestamps use an RFC 3339 value with an explicit offset. The recorder writes on
 
 ## Staged implementation
 
-| Stage | Scope                                                                         | Issue                                                    |
-| ----- | ----------------------------------------------------------------------------- | -------------------------------------------------------- |
-| 1     | Add `tool` hierarchy/viewer support and projection tests                      | `issues/open/20260707-add-tool-boundary-level.md`        |
-| 2     | Implement oplog parsing, discovery conversion, CLI, examples, and tests       | `issues/open/20260707-define-oplog-and-discovery.md`     |
-| 3     | Add the consent-based Windows recorder and format checks                      | `issues/open/20260707-add-windows-operation-recorder.md` |
+| Stage | Scope                                                                   | Issue                                                    |
+| ----- | ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| 1     | Add `tool` hierarchy/viewer support and projection tests                | `issues/open/20260707-add-tool-boundary-level.md`        |
+| 2     | Implement oplog parsing, discovery conversion, CLI, examples, and tests | `issues/open/20260707-define-oplog-and-discovery.md`     |
+| 3     | Add the consent-based Windows recorder and format checks                | `issues/open/20260707-add-windows-operation-recorder.md` |
 
 ## Assertable subset
 
