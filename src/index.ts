@@ -8,3 +8,4 @@ export * from "./effects.js";
 export * from "./migrate.js";
 export * from "./validate.js";
 export * from "./graph.js";
+export * from "./analyze.js";

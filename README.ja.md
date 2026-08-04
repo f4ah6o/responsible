@@ -36,6 +36,8 @@ ProcessView = normalize(project(ActivityGraph, boundary))
 - **階層 drill-down** — Activity は無限に入れ子にでき、親は子の合成である。boundary zoom とは独立に、任意の分解スコープへ drill-down できる。
 - **インタラクティブなビューア** — Activity ノード、責任境界レーン、境界間エッジ、入れ子レーンレイアウトを備えた単一画面の React Flow ビューア。
 - **契約と作用(`responsible.v1`)** — Activity に `requires` / `ensures` / `effects` を宣言できる。宣言された effect はノード上のバッジと target 境界レーンへの破線エッジとして描画され、同一境界フローを合成するのと同じ規則で boundary zoom に応じて現れたり隠れたりする。
+- **BPMN を越える意味解析** — `analyzeProcessModel` が、図形表現へ還元せずにトポロジー、フロー循環、責任割当、境界間 handoff、契約、作用、成熟度、明示的な自動化準備シグナルを同時に解析する。
+- **LLM / エージェント向け CLI 契約** — stdin(`-`)、決定論的 JSON、compact 出力、機械可読な検証 envelope、モデル定義の複合境界、安定した終了コード、`responsible capabilities` を備える。
 - **カードで作成(Magica 風)** — JSON を書かずに小さな業務プロセスを作れる。編集可能なキャンバスに業務カードを並べてつなぎ、担当・条件・作用を詳細パネルで編集すると、カードデッキが `responsible.v1` モデルに変換され、既存の検証・射影・boundary zoom がそのまま使える。カード UX は authoring layer、responsible core は semantic layer である。
 - **自分のモデルを表示** — ツールバーから任意の `responsible.v0` / `responsible.v1` JSON ファイルを読み込める。構造検証が JSON パス付きで問題を報告し、フラットなモデルは自動的に合成ルートで包まれる。読み込んだモデルは `localStorage` に永続化され、リロードしても一覧に残る。ツールバーから削除もできる。
 - **共有可能な URL** — プロセス・boundary zoom レベル・drill-down スコープが URL ハッシュに同期されるため、リンクだけで同じ View を再現できる。読み込みモデルの場合は「共有リンクをコピー」でモデル本体を圧縮して URL(`#m=`)に埋め込むため、JSON ファイルを渡さなくても別のブラウザで同じ図を開ける。
@@ -122,11 +124,20 @@ npx responsible validate models/*.json
 # responsible.v0 モデルを v1 へ移行して stdout に出力する。
 npx responsible migrate models/order-fulfillment.json > models/order-fulfillment.v1.json
 
-# モデルを指定した責任境界へ射影し、ProcessView を stdout に出力する。
-npx responsible project models/order-fulfillment.json --boundary department
+# モデル定義の責任キーまたは複合キーへ射影する。
+npx responsible project models/order-fulfillment.json --boundary company,department
+
+# トポロジー、契約、作用、handoff、自動化シグナルを解析する。
+npx responsible analyze models/application-approval.v1.json --boundary department
+
+# エージェントが呼び出す前に安定した CLI protocol を取得する。
+npx responsible capabilities --compact
+
+# 生成モデルを stdin から渡し、機械可読な検証結果を受け取る。
+cat model.json | npx responsible validate - --format json --compact
 ```
 
-正常出力(移行後・射影後の JSON)は stdout に、診断情報(検証エラー、`ok <file>`)は stderr に出るため、`validate` / `migrate` はパイプで連結できる。`--boundary` には `company / department / section / team / person` のいずれかを指定する。使い方は `responsible --help` または引数なしで実行すると表示される。
+JSON のドメイン出力は stdout、人間向け診断は stderr に出る。`validate --format json` は成功時の stderr ノイズを出さず、安定した `responsible.cli.v1` envelope を返す。`-` は stdin の UTF-8 JSON、`--compact` は1行 JSONを意味する。境界式は BPMN lane の固定語彙ではなくモデル定義のキーであり、`department`、`system`、`company,department` のようなカンマ区切り複合式を指定できる。終了コードは `0`=成功、`1`=モデル/操作エラー、`2`=CLI 使用法エラー。機械契約は [`docs/agent-interface.ja.md`](docs/agent-interface.ja.md) にまとめている。
 
 ## モデルを書く(エディタ支援)
 
@@ -201,6 +212,7 @@ type FlowDef = { from: string; to: string; mapping?: string; contract?: string }
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect モデル: 境界を跨いで観測可能な plain data としての effect                                   |
 | [`docs/card-authoring.md`](docs/card-authoring.ja.md)                                                           | Card authoring layer: カード種別と `responsible.v1` への対応                                       |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | 背景研究（非規範）                                                                                 |
+| [`docs/agent-interface.md`](docs/agent-interface.ja.md)                                                         | CI / agent 向けの安定 CLI protocol、stdin、JSON envelope、終了コード                               |
 | [`docs/release.md`](docs/release.ja.md)                                                                         | リリース手順: `CHANGES.md`、バージョン更新、リリースワークフロー                                   |
 
 ## アーキテクチャ
@@ -215,6 +227,7 @@ src/
   quotient.ts    DAG graph quotient projection（分岐・合流）
   normalize.ts   Responsibility Boundary Normal Form
   graph.ts       フローグラフのヘルパー
+  analyze.ts     topology + responsibility + contract/effect + automation analysis
   semantic.ts    セマンティックコアの語彙型、Effect、不変条件ヘルパー
   effects.ts     宣言された v1 effect の境界への射影（projectEffects）
   viewer/        React + React Flow リファレンスビューア

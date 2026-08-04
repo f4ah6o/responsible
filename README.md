@@ -36,6 +36,8 @@ One model, written once at the finest granularity you know, produces consistent 
 - **Hierarchical drill-down** — Activities nest arbitrarily; a parent is the composition of its children. Drill into any decomposition scope independently of boundary zoom.
 - **Interactive viewer** — single-screen React Flow viewer with Activity nodes, responsibility lanes, cross-boundary edges, and nested lane layout.
 - **Contracts and effects (`responsible.v1`)** — declare `requires` / `ensures` / `effects` on Activities. Declared effects render as node badges and dashed edges to the target boundary's lane, and hide/appear with boundary zoom under the same rule that collapses same-boundary flows.
+- **Semantic analysis beyond BPMN** — `analyzeProcessModel` inspects topology, flow cycles, responsibility coverage, cross-boundary handoffs, contracts, effects, status maturity, and explicit automation-readiness signals without reducing the model to diagram notation.
+- **Agent-friendly CLI contract** — stdin (`-`), deterministic JSON, compact output, machine-readable validation envelopes, model-defined composite boundaries, stable exit codes, and `responsible capabilities` make the core directly usable from LLM tools and CI.
 - **Card authoring (Magica-style)** — build a small process without writing JSON: create business-Activity cards on an editable canvas, connect them, and edit responsibility / conditions / effects in a detail panel. The deck converts to a `responsible.v1` model that flows through the same validation, projection, and boundary zoom as any other model. Card UX is the authoring layer; the responsible core is the semantic layer.
 - **Bring your own model** — load any `responsible.v0` / `responsible.v1` JSON file from the toolbar. Structural validation reports issues with JSON paths; flat models are automatically wrapped in a synthetic root. Imported models persist in `localStorage` and survive a reload; they can be removed from the toolbar.
 - **Shareable URLs** — process, boundary zoom level, and drill-down scope sync to the URL hash, so a link reproduces the exact view. For an imported model, "Copy share link" compresses the model itself into the URL (`#m=`) so anyone opening the link sees the same diagram, no upload required.
@@ -122,11 +124,20 @@ npx responsible validate models/*.json
 # Migrate a responsible.v0 model to v1 and print it to stdout.
 npx responsible migrate models/order-fulfillment.json > models/order-fulfillment.v1.json
 
-# Project a model onto a responsibility boundary and print the resulting ProcessView.
-npx responsible project models/order-fulfillment.json --boundary department
+# Project onto any model-defined responsibility key or composite key path.
+npx responsible project models/order-fulfillment.json --boundary company,department
+
+# Analyze topology, contracts, effects, handoffs, and automation signals.
+npx responsible analyze models/application-approval.v1.json --boundary department
+
+# Discover the stable CLI protocol before invoking it from an agent.
+npx responsible capabilities --compact
+
+# Pipe a generated model through stdin and receive machine-readable validation.
+cat model.json | npx responsible validate - --format json --compact
 ```
 
-Normal output (migrated / projected JSON) goes to stdout; diagnostics (validation issues, `ok <file>`) go to stderr, so `validate` and `migrate` compose in a pipeline. `--boundary` accepts one of `company / department / section / team / person`. Run `responsible --help` or with no arguments for usage.
+JSON domain output goes to stdout and human diagnostics go to stderr. `validate --format json` emits a stable `responsible.cli.v1` envelope with no stderr success noise. `-` reads UTF-8 JSON from stdin; `--compact` produces single-line JSON. Boundary expressions are model-defined keys, not a fixed BPMN lane vocabulary: `department`, `system`, and comma-separated composite expressions such as `company,department` are accepted. Exit codes are `0` success, `1` model/operation failure, and `2` invalid CLI usage. See [`docs/agent-interface.md`](docs/agent-interface.md) for the machine contract.
 
 ## Authoring models
 
@@ -201,6 +212,7 @@ The authoritative definitions live in [`src/model.ts`](src/model.ts), and struct
 | [`docs/activity-effects.md`](docs/activity-effects.md) / [`docs/data-and-effects.md`](docs/data-and-effects.md) | Effect model: effects as plain data observable across boundaries                                |
 | [`docs/card-authoring.md`](docs/card-authoring.md)                                                              | Card authoring layer: card types and their mapping to `responsible.v1`                          |
 | [`docs/research-report.md`](docs/research-report.md)                                                            | Background research (non-normative)                                                             |
+| [`docs/agent-interface.md`](docs/agent-interface.md)                                                            | Stable CLI protocol for CI, agents, stdin, JSON envelopes, and exit codes                       |
 | [`docs/release.md`](docs/release.md)                                                                            | Release process: `CHANGES.md`, version bump, release workflow                                   |
 
 ## Architecture
@@ -215,6 +227,7 @@ src/
   quotient.ts    DAG graph quotient projection (branch / merge)
   normalize.ts   Responsibility Boundary Normal Form
   graph.ts       flow-graph helpers
+  analyze.ts     topology + responsibility + contract/effect + automation analysis
   semantic.ts    semantic-core vocabulary types, Effect, invariant helpers
   effects.ts     projection of declared v1 effects onto a boundary (projectEffects)
   viewer/        React + React Flow reference viewer

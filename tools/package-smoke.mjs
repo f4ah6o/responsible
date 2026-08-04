@@ -1,11 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const temp = mkdtempSync(path.join(tmpdir(), "responsible-package-"));
+const temp = mkdtempSync(path.join(root, ".responsible-package-"));
 
 try {
   execFileSync("pnpm", ["pack", "--pack-destination", temp], {
@@ -43,17 +42,33 @@ try {
     [
       "--input-type=module",
       "-e",
-      'const pkg = await import("@f4ah6o/responsible"); if (typeof pkg.validateProcessModel !== "function") process.exit(1);',
+      'const pkg = await import("@f4ah6o/responsible"); if (typeof pkg.validateProcessModel !== "function" || typeof pkg.analyzeProcessModel !== "function") process.exit(1);',
     ],
     { cwd: installDir, stdio: "inherit" },
   );
 
   const bin = path.join(installDir, "node_modules", ".bin", "responsible");
   execFileSync(bin, ["--help"], { cwd: installDir, stdio: "inherit" });
+  const capabilities = JSON.parse(
+    execFileSync(bin, ["capabilities", "--compact"], { cwd: installDir, encoding: "utf8" }),
+  );
+  if (capabilities.protocolVersion !== "responsible.cli.v1") {
+    throw new Error("packed CLI returned an unexpected capabilities protocol");
+  }
   execFileSync(bin, ["validate", path.join(root, "examples", "order-fulfillment.json")], {
     cwd: installDir,
     stdio: "inherit",
   });
+  const analysis = JSON.parse(
+    execFileSync(
+      bin,
+      ["analyze", path.join(root, "examples", "application-approval.v1.json"), "--compact"],
+      { cwd: installDir, encoding: "utf8" },
+    ),
+  );
+  if (!analysis.summary || !analysis.semantics || !analysis.automation) {
+    throw new Error("packed CLI analyze output is incomplete");
+  }
 } finally {
   rmSync(temp, { recursive: true, force: true });
 }

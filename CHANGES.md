@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add dependency-free semantic analysis through `analyzeProcessModel` and `responsible analyze`: deterministic reports combine topology (entry/exit/isolated Activities and flow SCC cycles), responsibility assignment and cross-boundary handoffs, contract/effect coverage, referenced types, status maturity, and conservative automation-readiness signals. This exposes model meaning beyond BPMN/control-flow notation to CI and higher-level tools.
+- Add the stable `responsible.cli.v1` agent contract: `responsible capabilities`, UTF-8 stdin via `-`, compact JSON, `validate --format json` envelopes, model-defined single/composite boundary expressions, and distinct exit codes (`0` success, `1` model/operation error, `2` usage error). Documented in `docs/agent-interface.md` / `docs/agent-interface.ja.md` and covered by CLI and packed-package smoke tests.
 - Harden boundary identity and projection identifiers (#44, #46): typed responsibility values, delimiter-heavy multi-axis paths, composite Activity ids, projected-flow deduplication keys, viewer lane ids, and React Flow edge ids no longer rely on ambiguous string concatenation. Display labels remain separate from canonical identity.
 - Preserve and explicitly reject incomplete projection scopes (#45): quotient and linear projectors operate over all selected leaf Activities, report disconnected ids instead of silently dropping them, and the CLI projects an explicit leaf scope.
 - Align runtime validation with the public model and JSON Schema (#47): TypeDef variants, FieldDef, FlowDef optional fields, `$schema`, unknown keys, and optional field types are validated with JSON-path issues; schema/runtime conformance fixtures cover the shared contract.
@@ -15,6 +17,8 @@
 - Add a Magica-style card authoring mode to the viewer (#42): a "Create with cards" toolbar toggle opens an authoring screen (card palette / editable React Flow card canvas / detail editor / live `responsible.v1` JSON preview) where Activity and Decision cards are created and connected without writing JSON. Responsibility (lane hint), Condition (`requires` / `ensures`), and Effect cards edit fields of the eventual `ActivityDef`; a Decision card converts to an ordinary Activity whose branch is expressed as a flow `mapping` (`when output = approved`), never as a gateway. The deck converts through a pure adapter (`src/viewer/authoring/deckToModel.ts`) and "Open in viewer" reuses the exact JSON-import path (`parseProcessModelJson` → `ensureRootActivity` → localStorage), so existing validation, projection, boundary zoom, drill-down, and share links work unchanged; drafts persist to `localStorage` (`responsible.authoring.deck.v1`), models export as JSON, and a built-in sample deck reproduces the `application_approval` v1 sample (asserted end-to-end by `src/__tests__/card-authoring.test.ts`). The semantic core is untouched — the layering rule ("card UX is the authoring layer, responsible core is the semantic layer") is documented in `docs/card-authoring.md` / `docs/card-authoring.ja.md` and the READMEs.
 
 ### Changed
+
+- Remove the CLI's fixed hierarchy allowlist for `--boundary`; responsibility keys are model-defined and comma-separated composite expressions such as `company,department` now map directly to `BoundaryExpr`. The common hierarchy remains discoverable metadata rather than a semantic restriction.
 
 ### Fixed
 
