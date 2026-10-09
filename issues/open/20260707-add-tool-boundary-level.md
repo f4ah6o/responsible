@@ -63,3 +63,7 @@ company < department < section < team < person < tool
 - 操作ログパーサと発見変換（Stage 2）。
 - Windows 記録スクリプト（Stage 3）。
 - 出現を一切畳み込まない専用トレースビュー。
+
+---
+
+> 2026-10-09 再確認: main (6412401) 時点で未実装のため open のまま。

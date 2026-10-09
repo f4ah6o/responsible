@@ -139,3 +139,7 @@ discoverProcessModel(entries, options): ProcessModel
 - Windows 記録（Stage 3）。
 - 複数トレース統合、頻度分析、分岐推定。
 - 出現を一切畳み込まない専用トレースビュー。
+
+---
+
+> 2026-10-09 再確認: main (6412401) 時点で未実装のため open のまま。
